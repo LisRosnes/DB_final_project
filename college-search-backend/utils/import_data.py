@@ -27,14 +27,16 @@ def create_indexes():
     db.schools.create_index([('school_id', 1)], unique=True)
     db.schools.create_index([('school.name', 'text'), ('school.alias', 'text')])
     db.schools.create_index([('school.state', 1)])
-    db.schools.create_index([('school.state', 1), ('latest.avg_net_price', 1)])
+    # Index by state and cost (tuition or avg_net_price if available) for faster filtering
+    db.schools.create_index([('school.state', 1), ('latest.cost.tuition.in_state', 1)])
     db.schools.create_index([('school.ownership', 1)])
     db.schools.create_index([('school.degrees_awarded.predominant', 1)])
-    db.schools.create_index([('latest.admission_rate', 1)])
-    db.schools.create_index([('latest.avg_net_price', 1)])
-    db.schools.create_index([('latest.median_earnings_10yr', -1)])
-    db.schools.create_index([('latest.completion_rate_overall', -1)])
-    db.schools.create_index([('latest.size', 1)])
+    db.schools.create_index([('latest.admissions.admission_rate.overall', 1)])
+    db.schools.create_index([('latest.cost.avg_net_price.overall', 1)])
+    # Note: earnings typically live in `costs_aid_completion` collection; this index is optional
+    db.schools.create_index([('latest.earnings.10_yrs_after_entry.median', -1)])
+    db.schools.create_index([('latest.completion.completion_rate_4yr_150nt', -1)])
+    db.schools.create_index([('latest.student.size', 1)])
     db.schools.create_index([('location.lat', 1), ('location.lon', 1)])
     
     # Admissions_student collection indexes

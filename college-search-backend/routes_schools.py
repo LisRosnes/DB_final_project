@@ -3,6 +3,7 @@ API routes for schools-related endpoints
 """
 from flask import Blueprint, request, jsonify
 from models import SchoolModel, AcademicsProgramsModel
+from models import CostsAidCompletionModel
 from bson import json_util
 import json
 
@@ -14,6 +15,31 @@ def parse_json(data):
     return json.loads(json_util.dumps(data))
 
 
+def _merge_costs_into_basic_info(basic_info, costs):
+    """Merge cost & outcomes fields from `costs_aid_completion` record into the
+    `basic_info.latest` object so the frontend can read a consistent set of fields
+    (median earnings, median debt, default rate, completion rates, pell rate).
+    """
+    if not basic_info:
+        return basic_info
+    if not costs:
+        return basic_info
+
+    latest = basic_info.get('latest', {}) or {}
+
+    latest['median_earnings_10yr'] = costs.get('earnings', {}).get('10_yrs_after_entry', {}).get('median')
+    # Optional fields if present
+    latest['median_earnings_6yr'] = costs.get('earnings', {}).get('6_yrs_after_entry', {}).get('median')
+    latest['median_debt'] = costs.get('debt', {}).get('median') if costs.get('debt') else latest.get('median_debt')
+    latest['completion_rate_4yr'] = costs.get('completion', {}).get('completion_rate_4yr_150nt')
+    latest['completion_rate_overall'] = costs.get('completion', {}).get('completion_rate_overall')
+    latest['default_rate_3yr'] = costs.get('repayment', {}).get('3_yr_default_rate')
+    latest['pell_grant_rate'] = costs.get('aid', {}).get('pell_grant_rate') or latest.get('pell_grant_rate')
+
+    basic_info['latest'] = latest
+    return basic_info
+
+
 @schools_bp.route('/filter', methods=['GET', 'POST'])
 def filter_schools():
     """
@@ -21,8 +47,8 @@ def filter_schools():
     
     Query parameters:
     - state: State abbreviation (e.g., 'CA', 'NY')
-    - cost_min: Minimum average net price
-    - cost_max: Maximum average net price
+    - cost_min: Minimum cost (tuition in-state or avg net price fallback)
+    - cost_max: Maximum cost (tuition in-state or avg net price fallback)
     - earnings_min: Minimum median earnings (10 years after entry)
     - admission_rate_max: Maximum admission rate
     - completion_rate_min: Minimum completion rate
@@ -34,7 +60,8 @@ def filter_schools():
     - major_threshold: Minimum percentage for major filter (default 0.05)
     - page: Page number (default 1)
     - limit: Results per page (default 20, max 100)
-    - sort_by: Field to sort by (default 'school.name')
+        - sort_by: Field to sort by (default 'school.name')
+            Common options: 'school.name', 'latest.avg_net_price', 'latest.size', 'latest.admission_rate'
     - sort_order: 'asc' or 'desc' (default 'asc')
     """
     try:
@@ -190,10 +217,13 @@ def compare_schools():
             # Get additional data
             programs = AcademicsProgramsModel.find_by_school_and_year(school_id, year)
             costs_outcomes = CostsAidCompletionModel.find_by_school_and_year(school_id, year)
-            
+
+            # Merge cost/outcome fields into basic_info.latest so UI can access them under basic_info.latest
+            merged_basic_info = _merge_costs_into_basic_info(school_info, costs_outcomes)
+
             comparison_data.append({
                 'school_id': school_id,
-                'basic_info': school_info,
+                'basic_info': merged_basic_info,
                 'programs': programs,
                 'costs_outcomes': costs_outcomes
             })
@@ -238,9 +268,12 @@ def get_school_details(school_id):
         admissions = AdmissionsStudentModel.find_by_school_and_year(school_id, year)
         field_of_study = ProgramsFieldOfStudyModel.get_programs_by_school(school_id, year)
         
+        # Merge costs/outcomes into school basic info for convenience in UI
+        merged_basic_info = _merge_costs_into_basic_info(school, costs_outcomes)
+
         result = {
             'school_id': school_id,
-            'basic_info': school,
+            'basic_info': merged_basic_info,
             'programs': programs,
             'costs_outcomes': costs_outcomes,
             'admissions': admissions,

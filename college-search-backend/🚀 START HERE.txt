@@ -1,6 +1,6 @@
 ╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
-║   🎓 COLLEGE SEARCH PLATFORM - YOUR COMPLETE PROJECT 🎓      ║
+║   🎓 COLLEGE SEARCH PLATFORM 🎓                              ║
 ║                                                               ║
 ║   ✅ Backend API (Flask + MongoDB)                           ║
 ║   ✅ Frontend App (React + TypeScript + C3.js)               ║
@@ -10,7 +10,7 @@
 ╚═══════════════════════════════════════════════════════════════╝
 
 
-📖 QUICK START - READ THESE IN ORDER:
+📖 QUICK START:
 ═════════════════════════════════════════════════════════════════
 
 1️⃣  FILES_OVERVIEW.txt (THIS DIRECTORY)
