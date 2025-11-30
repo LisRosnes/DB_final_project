@@ -116,11 +116,11 @@ const About: React.FC = () => {
           <div className="grid grid-cols-2 gap-4 mt-4">
             <div className="card" style={{ backgroundColor: 'var(--bg-secondary)' }}>
               <h3 className="font-semibold">Humphry Amoakone</h3>
-              <p className="text-sm text-gray">Database Design & Backend Development</p>
+              <p className="text-sm text-gray">Database Implementation & Backend Development</p>
             </div>
             <div className="card" style={{ backgroundColor: 'var(--bg-secondary)' }}>
               <h3 className="font-semibold">Elisa Rosnes</h3>
-              <p className="text-sm text-gray">Frontend Development & Data Visualization</p>
+              <p className="text-sm text-gray">Database Architecture & Full Stack</p>
             </div>
           </div>
         </div>

@@ -104,7 +104,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
             />
           </div>
 
-          {/* Min Earnings */}
+          {/* Min Earnings
           <div className="form-group">
             <label className="form-label">Min Earnings (10yr, $)</label>
             <input
@@ -114,10 +114,10 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
               value={filters.earnings_min || ''}
               onChange={(e) => handleInputChange('earnings_min', e.target.value ? parseFloat(e.target.value) : undefined)}
             />
-          </div>
+          </div> */}
 
           {/* Max Admission Rate */}
-          <div className="form-group">
+          {/* <div className="form-group">
             <label className="form-label">Max Admission Rate (%)</label>
             <input
               type="number"
@@ -130,10 +130,10 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
                 handleInputChange('admission_rate_max', e.target.value ? parseFloat(e.target.value) / 100 : undefined)
               }
             />
-          </div>
+          </div> */}
 
           {/* Min Completion Rate */}
-          <div className="form-group">
+          {/* <div className="form-group">
             <label className="form-label">Min Completion Rate (%)</label>
             <input
               type="number"
@@ -146,10 +146,10 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
                 handleInputChange('completion_rate_min', e.target.value ? parseFloat(e.target.value) / 100 : undefined)
               }
             />
-          </div>
+          </div> */}
 
           {/* Degree Level */}
-          <div className="form-group">
+          {/* <div className="form-group">
             <label className="form-label">Degree Level</label>
             <select
               className="form-select"
@@ -162,10 +162,10 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
               <option value="3">Bachelor</option>
               <option value="4">Graduate</option>
             </select>
-          </div>
+          </div> */}
 
           {/* Major */}
-          <div className="form-group">
+          {/* <div className="form-group">
             <label className="form-label">Major</label>
             <select
               className="form-select"
@@ -180,10 +180,10 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
                 </option>
               ))}
             </select>
-          </div>
+          </div> */}
 
           {/* Size Min */}
-          <div className="form-group">
+          {/* <div className="form-group">
             <label className="form-label">Min Size (students)</label>
             <input
               type="number"
@@ -192,10 +192,10 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
               value={filters.size_min || ''}
               onChange={(e) => handleInputChange('size_min', e.target.value ? parseInt(e.target.value) : undefined)}
             />
-          </div>
+          </div> */}
 
           {/* Size Max */}
-          <div className="form-group">
+          {/* <div className="form-group">
             <label className="form-label">Max Size (students)</label>
             <input
               type="number"
@@ -204,7 +204,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
               value={filters.size_max || ''}
               onChange={(e) => handleInputChange('size_max', e.target.value ? parseInt(e.target.value) : undefined)}
             />
-          </div>
+          </div> */}
 
           {/* Sort By */}
           <div className="form-group">

@@ -83,6 +83,14 @@ def test_state_aggregations():
     return response.status_code == 200
 
 
+def test_roi():
+    """Test ROI aggregation"""
+    params = {'state': 'CA', 'year': 2020}
+    response = requests.get(f'{BASE_URL}/api/aggregations/roi', params=params)
+    print_response("ROI Aggregation (CA, 2020)", response)
+    return response.status_code == 200
+
+
 def run_all_tests():
     """Run all test functions"""
     tests = [
@@ -94,6 +102,7 @@ def run_all_tests():
         ("Get States", test_get_states),
         ("Get Majors", test_get_majors),
         ("State Aggregations", test_state_aggregations),
+        ("ROI Aggregation", test_roi),
     ]
     
     print("\n" + "="*60)

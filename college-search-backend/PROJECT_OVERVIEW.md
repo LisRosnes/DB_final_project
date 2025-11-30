@@ -9,7 +9,7 @@ This is a comprehensive Flask-based REST API backend for your College Search Pla
 ### Core Application Files
 
 1. **app.py** - Main Flask application with all routes registered
-2. **database.py** - MongoDB connection handler with singleton pattern
+2. **database.py** - MongoDB connection handler
 3. **models.py** - Data access layer with methods for each collection
 4. **routes_schools.py** - School filtering, searching, and comparison endpoints
 5. **routes_programs.py** - Program analysis and ROI trend endpoints

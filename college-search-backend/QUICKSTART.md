@@ -22,7 +22,6 @@ Get your College Search API up and running in 5 minutes!
 
 ```bash
 # Navigate to your project folder
-cd college-search-backend
 
 # Create virtual environment
 python -m venv venv
