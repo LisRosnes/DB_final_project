@@ -27,17 +27,6 @@ const SchoolDetails: React.FC = () => {
     fetchSchoolDetails();
   }, [id]);
 
-  const getValueFromPath = (obj: any, path: string) => {
-    if (!obj) return undefined;
-    const parts = path.split('.');
-    let current = obj;
-    for (const part of parts) {
-      current = current?.[part];
-      if (current === undefined) break;
-    }
-    return current;
-  };
-
   const formatWebsiteUrl = (url: string | undefined): string => {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -48,8 +37,8 @@ const SchoolDetails: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container" style={{ paddingTop: '2rem' }}>
-        <div className="loading">
+      <div className="container main-content">
+        <div className="loading-wrapper">
           <div className="spinner"></div>
           <p className="mt-4">Loading school details...</p>
         </div>
@@ -59,13 +48,15 @@ const SchoolDetails: React.FC = () => {
 
   if (error || !schoolDetails) {
     return (
-      <div className="container" style={{ paddingTop: '2rem' }}>
+      <div className="container main-content">
         <div className="card">
-          <p className="text-center" style={{ color: '#ef4444' }}>{error || 'School not found'}</p>
-          <div className="text-center mt-4">
-            <button onClick={() => navigate('/')} className="btn btn-primary">
-              ← Back to Search
-            </button>
+          <div className="card-body text-center">
+            <p className="text-danger">{error || 'School not found'}</p>
+            <div className="mt-4">
+              <button onClick={() => navigate('/')} className="btn btn-primary">
+                ← Back to Search
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -75,310 +66,391 @@ const SchoolDetails: React.FC = () => {
   const { basic_info, programs, costs_outcomes, admissions, year } = schoolDetails;
   const school = basic_info?.school || {};
   const latest = basic_info?.latest || {};
-  
   const ownershipColor = getOwnershipColor(school.ownership);
+  const ownershipBadgeClass = school.ownership === 1 ? 'badge-public' : 
+                              school.ownership === 2 ? 'badge-private' : 
+                              school.ownership === 3 ? 'badge-forprofit' : 'badge';
 
   return (
-    <div className="container" style={{ paddingTop: '2rem', paddingBottom: '2rem' }}>
+    <div className="container main-content">
       {/* Back Button */}
-      <button 
-        onClick={() => navigate(-1)} 
-        className="btn btn-outline mb-4"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+      <button
+        onClick={() => navigate(-1)}
+        className="btn btn-outline mb-6 flex items-center gap-2"
       >
         ← Back
       </button>
 
       {/* Hero Section */}
-      <div className="card" style={{ 
-        background: `linear-gradient(135deg, ${ownershipColor}15, ${ownershipColor}05)`,
-        borderLeft: `4px solid ${ownershipColor}`,
-        marginBottom: '1.5rem'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-              {school.name}
-            </h1>
-            <p style={{ color: '#6b7280', fontSize: '1.1rem' }}>
-              {school.city}, {school.state}
-            </p>
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
-              <span className="badge" style={{ backgroundColor: `${ownershipColor}20`, color: ownershipColor, padding: '0.5rem 1rem' }}>
-                {getOwnershipLabel(school.ownership)}
-              </span>
-              <span className="badge" style={{ backgroundColor: '#f3f4f6', color: '#374151', padding: '0.5rem 1rem' }}>
-                📍 {basic_info?.location?.lat?.toFixed(2) || 'N/A'}, {basic_info?.location?.lon?.toFixed(2) || 'N/A'}
-              </span>
-              <span className="badge" style={{ backgroundColor: '#f3f4f6', color: '#374151', padding: '0.5rem 1rem' }}>
-                ID: {schoolDetails.school_id}
-              </span>
+      <div className="card mb-6">
+        <div className="card-body">
+          <div className="flex flex-col md:flex-row justify-between items-start gap-6">
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold mb-2">
+                {school.name}
+              </h1>
+              <p className="text-gray-500 text-lg mb-4">
+                {school.city}, {school.state}
+              </p>
+              <div className="flex gap-3 flex-wrap">
+                <span className={`badge ${ownershipBadgeClass} px-4 py-2`}>
+                  {getOwnershipLabel(school.ownership)}
+                </span>
+                {school.accreditor && (
+                  <span className="badge badge-primary px-4 py-2">
+                    {school.accreditor}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            {school.school_url && (
-              <a
-                href={formatWebsiteUrl(school.school_url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary"
-                style={{ marginBottom: '0.5rem' }}
-              >
-                Visit Website →
-              </a>
-            )}
+            <div className="flex flex-col items-end gap-3">
+              {school.school_url && (
+                <a
+                  href={formatWebsiteUrl(school.school_url)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                >
+                  Visit Website →
+                </a>
+              )}
+              {school.price_calculator_url && (
+                <a
+                  href={school.price_calculator_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-outline"
+                >
+                  Net Price Calculator
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Quick Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="card" style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#3b82f6' }}>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="card text-center p-6">
+          <div className="text-3xl font-bold">
             {formatNumber(latest.student?.size || 0)}
           </div>
-          <div style={{ color: '#6b7280', marginTop: '0.25rem' }}>Students</div>
+          <div className="text-gray-500 mt-1">Students</div>
         </div>
-        <div className="card" style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#10b981' }}>
+        <div className="card text-center p-6">
+          <div className="text-3xl font-bold">
             {formatPercentage(latest.admission_rate || latest.admissions?.admission_rate?.overall)}
           </div>
-          <div style={{ color: '#6b7280', marginTop: '0.25rem' }}>Acceptance Rate</div>
+          <div className="text-gray-500 mt-1">Acceptance Rate</div>
         </div>
-        <div className="card" style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#f59e0b' }}>
+        <div className="card text-center p-6">
+          <div className="text-3xl font-bold">
             {formatCurrency(latest.avg_net_price || costs_outcomes?.cost?.avg_net_price?.private)}
           </div>
-          <div style={{ color: '#6b7280', marginTop: '0.25rem' }}>Avg. Net Price</div>
+          <div className="text-gray-500 mt-1">Avg. Net Price</div>
         </div>
-        <div className="card" style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#8b5cf6' }}>
+        <div className="card text-center p-6">
+          <div className="text-3xl font-bold">
             {formatPercentage(latest.completion_rate_4yr || costs_outcomes?.completion?.completion_rate_4yr_150nt)}
           </div>
-          <div style={{ color: '#6b7280', marginTop: '0.25rem' }}>Graduation Rate</div>
+          <div className="text-gray-500 mt-1">Graduation Rate</div>
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', borderBottom: '2px solid #e5e7eb', paddingBottom: '0.5rem' }}>
+      <div className="tabs mb-6">
         {(['overview', 'academics', 'costs', 'outcomes'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            style={{
-              padding: '0.75rem 1.5rem',
-              border: 'none',
-              background: activeTab === tab ? '#3b82f6' : 'transparent',
-              color: activeTab === tab ? 'white' : '#6b7280',
-              borderRadius: '0.5rem 0.5rem 0 0',
-              cursor: 'pointer',
-              fontWeight: activeTab === tab ? '600' : '400',
-              textTransform: 'capitalize',
-              transition: 'all 0.2s'
-            }}
+            className={`tab ${activeTab === tab ? 'active' : ''}`}
           >
-            {tab}
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
       <div className="card">
-        {activeTab === 'overview' && (
-          <div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>School Overview</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-              <div>
-                <h4 style={{ fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>Basic Information</h4>
-                <table style={{ width: '100%' }}>
-                  <tbody>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Institution Type</td><td style={{ fontWeight: '500' }}>{getOwnershipLabel(school.ownership)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Location</td><td style={{ fontWeight: '500' }}>{school.city}, {school.state}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Total Students</td><td style={{ fontWeight: '500' }}>{formatNumber(latest.student?.size || 0)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Graduate Students</td><td style={{ fontWeight: '500' }}>{formatNumber(latest.student?.grad_students || 0)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Accreditor</td><td style={{ fontWeight: '500' }}>{school.accreditor || 'N/A'}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Religious Affiliation</td><td style={{ fontWeight: '500' }}>{school.religious_affiliation ? 'Yes' : 'No'}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <div>
-                <h4 style={{ fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>Admissions</h4>
-                <table style={{ width: '100%' }}>
-                  <tbody>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Acceptance Rate</td><td style={{ fontWeight: '500' }}>{formatPercentage(latest.admission_rate || latest.admissions?.admission_rate?.overall)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>SAT Average</td><td style={{ fontWeight: '500' }}>{latest.sat_avg || latest.admissions?.sat_scores?.average?.overall || 'N/A'}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>ACT Midpoint</td><td style={{ fontWeight: '500' }}>{latest.act_avg || 'N/A'}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Open Admissions</td><td style={{ fontWeight: '500' }}>{school.open_admissions_policy === 1 ? 'Yes' : 'No'}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'academics' && (
-          <div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>Academics & Programs</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-              <div>
-                <h4 style={{ fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>Graduation & Retention</h4>
-                <table style={{ width: '100%' }}>
-                  <tbody>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>4-Year Graduation Rate</td><td style={{ fontWeight: '500' }}>{formatPercentage(costs_outcomes?.completion?.completion_rate_4yr_150nt)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Overall Completion Rate</td><td style={{ fontWeight: '500' }}>{formatPercentage(costs_outcomes?.completion?.rate_suppressed?.four_year)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>FT Faculty Rate</td><td style={{ fontWeight: '500' }}>{formatPercentage(school.ft_faculty_rate)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Instructional Expenditure per FTE</td><td style={{ fontWeight: '500' }}>{formatCurrency(school.instructional_expenditure_per_fte)}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <div>
-                <h4 style={{ fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>Student Demographics</h4>
-                <table style={{ width: '100%' }}>
-                  <tbody>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>White</td><td style={{ fontWeight: '500' }}>{formatPercentage(latest.student?.demographics?.race_ethnicity?.white)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Black</td><td style={{ fontWeight: '500' }}>{formatPercentage(latest.student?.demographics?.race_ethnicity?.black)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Hispanic</td><td style={{ fontWeight: '500' }}>{formatPercentage(latest.student?.demographics?.race_ethnicity?.hispanic)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Asian</td><td style={{ fontWeight: '500' }}>{formatPercentage(latest.student?.demographics?.race_ethnicity?.asian)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>International</td><td style={{ fontWeight: '500' }}>{formatPercentage(costs_outcomes?.completion?.completion_rate_4yr_150_nonresident?.alien)}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            
-            {/* Programs Offered */}
-            {programs?.academics?.program_percentage && (
-              <div style={{ marginTop: '2rem' }}>
-                <h4 style={{ fontWeight: '600', marginBottom: '1rem', color: '#374151' }}>Top Programs Offered</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
-                  {Object.entries(programs.academics.program_percentage)
-                    .filter(([_, percentage]: [string, any]) => percentage > 0.01)
-                    .sort(([, a]: [string, any], [, b]: [string, any]) => b - a)
-                    .slice(0, 8)
-                    .map(([major, percentage]: [string, any]) => (
-                      <div key={major} className="badge" style={{ 
-                        backgroundColor: '#f3f4f6', 
-                        color: '#374151', 
-                        padding: '0.75rem 1rem',
-                        display: 'flex',
-                        justifyContent: 'space-between'
-                      }}>
-                        <span>{major.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
-                        <span style={{ fontWeight: '600', color: '#3b82f6' }}>
-                          {formatPercentage(percentage)}
-                        </span>
-                      </div>
-                    ))}
+        <div className="card-body">
+          {activeTab === 'overview' && (
+            <div>
+              <h3 className="text-xl font-semibold mb-4">School Overview</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-semibold mb-3">Basic Information</h4>
+                  <div className="space-y-2">
+                    <div className="metric-row">
+                      <span className="metric-label">Institution Type</span>
+                      <span className="metric-value">{getOwnershipLabel(school.ownership)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Location</span>
+                      <span className="metric-value">{school.city}, {school.state}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Total Students</span>
+                      <span className="metric-value">{formatNumber(latest.student?.size || 0)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Graduate Students</span>
+                      <span className="metric-value">{formatNumber(latest.student?.grad_students || 0)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Accreditor</span>
+                      <span className="metric-value">{school.accreditor || 'N/A'}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Religious Affiliation</span>
+                      <span className="metric-value">{school.religious_affiliation ? 'Yes' : 'No'}</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-3">Admissions</h4>
+                  <div className="space-y-2">
+                    <div className="metric-row">
+                      <span className="metric-label">Acceptance Rate</span>
+                      <span className="metric-value">{formatPercentage(latest.admission_rate || latest.admissions?.admission_rate?.overall)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">SAT Average</span>
+                      <span className="metric-value">{latest.sat_avg || latest.admissions?.sat_scores?.average?.overall || 'N/A'}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">ACT Midpoint</span>
+                      <span className="metric-value">{latest.act_avg || 'N/A'}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Open Admissions</span>
+                      <span className="metric-value">{school.open_admissions_policy === 1 ? 'Yes' : 'No'}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
-        {activeTab === 'costs' && (
-          <div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>Costs & Financial Aid</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-              <div>
-                <h4 style={{ fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>Tuition & Fees</h4>
-                <table style={{ width: '100%' }}>
-                  <tbody>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>In-State Tuition</td><td style={{ fontWeight: '500' }}>{formatCurrency(costs_outcomes?.cost?.tuition?.in_state)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Out-of-State Tuition</td><td style={{ fontWeight: '500' }}>{formatCurrency(costs_outcomes?.cost?.tuition?.out_of_state)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Average Net Price</td><td style={{ fontWeight: '500', color: '#10b981' }}>{formatCurrency(costs_outcomes?.cost?.avg_net_price?.private)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Room & Board (On Campus)</td><td style={{ fontWeight: '500' }}>{formatCurrency(costs_outcomes?.cost?.roomboard?.oncampus)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Books & Supplies</td><td style={{ fontWeight: '500' }}>{formatCurrency(costs_outcomes?.cost?.booksupply)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Total Cost of Attendance</td><td style={{ fontWeight: '500' }}>{formatCurrency(costs_outcomes?.cost?.attendance?.academic_year)}</td></tr>
-                  </tbody>
-                </table>
+          {activeTab === 'academics' && (
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Academics & Programs</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                  <h4 className="font-semibold mb-3">Graduation & Retention</h4>
+                  <div className="space-y-2">
+                    <div className="metric-row">
+                      <span className="metric-label">4-Year Graduation Rate</span>
+                      <span className="metric-value">{formatPercentage(costs_outcomes?.completion?.completion_rate_4yr_150nt)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Overall Completion Rate</span>
+                      <span className="metric-value">{formatPercentage(costs_outcomes?.completion?.rate_suppressed?.four_year)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">FT Faculty Rate</span>
+                      <span className="metric-value">{formatPercentage(school.ft_faculty_rate)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Instructional Expenditure per FTE</span>
+                      <span className="metric-value">{formatCurrency(school.instructional_expenditure_per_fte)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-3">Student Demographics</h4>
+                  <div className="space-y-2">
+                    <div className="metric-row">
+                      <span className="metric-label">White</span>
+                      <span className="metric-value">{formatPercentage(latest.student?.demographics?.race_ethnicity?.white)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Black</span>
+                      <span className="metric-value">{formatPercentage(latest.student?.demographics?.race_ethnicity?.black)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Hispanic</span>
+                      <span className="metric-value">{formatPercentage(latest.student?.demographics?.race_ethnicity?.hispanic)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Asian</span>
+                      <span className="metric-value">{formatPercentage(latest.student?.demographics?.race_ethnicity?.asian)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">International</span>
+                      <span className="metric-value">{formatPercentage(costs_outcomes?.completion?.completion_rate_4yr_150_nonresident?.alien)}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h4 style={{ fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>Financial Aid</h4>
-                <table style={{ width: '100%' }}>
-                  <tbody>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Pell Grant Rate</td><td style={{ fontWeight: '500' }}>{formatPercentage(costs_outcomes?.aid?.pell_grant_rate)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Federal Loan Rate</td><td style={{ fontWeight: '500' }}>{formatPercentage(costs_outcomes?.aid?.federal_loan_rate)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Median Debt (Completers)</td><td style={{ fontWeight: '500' }}>{formatCurrency(latest.median_debt)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Price Calculator URL</td><td style={{ fontWeight: '500' }}>
-                      {school.price_calculator_url ? (
-                        <a href={school.price_calculator_url} target="_blank" rel="noopener noreferrer">
-                          Net Price Calculator
-                        </a>
-                      ) : 'N/A'}
-                    </td></tr>
-                  </tbody>
-                </table>
-                
-                {/* Net Price by Income Level */}
-                {costs_outcomes?.cost?.net_price?.private?.by_income_level && (
-                  <div style={{ marginTop: '1.5rem' }}>
-                    <h5 style={{ fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>Net Price by Income Level</h5>
-                    <table style={{ width: '100%', fontSize: '0.875rem' }}>
-                      <tbody>
+              
+              {/* Programs Offered */}
+              {programs?.academics?.program_percentage && (
+                <div className="mt-8">
+                  <h4 className="font-semibold mb-4">Top Programs Offered</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {Object.entries(programs.academics.program_percentage)
+                      .filter(([_, percentage]: [string, any]) => percentage > 0.01)
+                      .sort(([, a]: [string, any], [, b]: [string, any]) => b - a)
+                      .slice(0, 8)
+                      .map(([major, percentage]: [string, any]) => (
+                        <div key={major} className="badge badge-primary px-4 py-3 flex justify-between items-center">
+                          <span className="truncate">
+                            {major.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </span>
+                          <span className="font-semibold ml-2">
+                            {formatPercentage(percentage)}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'costs' && (
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Costs & Financial Aid</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-semibold mb-3">Tuition & Fees</h4>
+                  <div className="space-y-2">
+                    <div className="metric-row">
+                      <span className="metric-label">In-State Tuition</span>
+                      <span className="metric-value">{formatCurrency(costs_outcomes?.cost?.tuition?.in_state)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Out-of-State Tuition</span>
+                      <span className="metric-value">{formatCurrency(costs_outcomes?.cost?.tuition?.out_of_state)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Average Net Price</span>
+                      <span className="metric-value text-success">{formatCurrency(costs_outcomes?.cost?.avg_net_price?.private)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Room & Board (On Campus)</span>
+                      <span className="metric-value">{formatCurrency(costs_outcomes?.cost?.roomboard?.oncampus)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Books & Supplies</span>
+                      <span className="metric-value">{formatCurrency(costs_outcomes?.cost?.booksupply)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Total Cost of Attendance</span>
+                      <span className="metric-value">{formatCurrency(costs_outcomes?.cost?.attendance?.academic_year)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-3">Financial Aid</h4>
+                  <div className="space-y-2">
+                    <div className="metric-row">
+                      <span className="metric-label">Pell Grant Rate</span>
+                      <span className="metric-value">{formatPercentage(costs_outcomes?.aid?.pell_grant_rate)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Federal Loan Rate</span>
+                      <span className="metric-value">{formatPercentage(costs_outcomes?.aid?.federal_loan_rate)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Median Debt (Completers)</span>
+                      <span className="metric-value">{formatCurrency(latest.median_debt)}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Net Price by Income Level */}
+                  {costs_outcomes?.cost?.net_price?.private?.by_income_level && (
+                    <div className="mt-6">
+                      <h5 className="font-semibold mb-3">Net Price by Income Level</h5>
+                      <div className="space-y-1">
                         {Object.entries(costs_outcomes.cost.net_price.private.by_income_level)
                           .sort(([a], [b]) => {
-                            // Sort by income range
                             const getMin = (range: string) => parseInt(range.split('-')[0]) || parseInt(range.split('+')[0]) || 0;
                             return getMin(a) - getMin(b);
                           })
                           .map(([range, price]: [string, any]) => (
-                            <tr key={range}>
-                              <td style={{ padding: '0.25rem 0', color: '#6b7280' }}>${range}</td>
-                              <td style={{ fontWeight: '500', textAlign: 'right' }}>{formatCurrency(price)}</td>
-                            </tr>
+                            <div key={range} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                              <span className="text-gray-600">${range}</span>
+                              <span className="font-semibold">{formatCurrency(price)}</span>
+                            </div>
                           ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'outcomes' && (
-          <div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>Student Outcomes</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-              <div>
-                <h4 style={{ fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>Loan Repayment & Default</h4>
-                <table style={{ width: '100%' }}>
-                  <tbody>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>3-Year Default Rate</td><td style={{ fontWeight: '500' }}>{formatPercentage(costs_outcomes?.repayment?.['3_yr_default_rate'])}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Default Rate Denominator</td><td style={{ fontWeight: '500' }}>{costs_outcomes?.repayment?.['3_yr_default_rate_denom']?.toLocaleString() || 'N/A'}</td></tr>
-                  </tbody>
-                </table>
-                
-                {/* Completion Outcomes */}
-                <div style={{ marginTop: '1.5rem' }}>
-                  <h5 style={{ fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>Completion Outcomes (8 Year)</h5>
-                  <table style={{ width: '100%', fontSize: '0.875rem' }}>
-                    <tbody>
-                      <tr><td style={{ padding: '0.25rem 0', color: '#6b7280' }}>Award Received</td><td style={{ fontWeight: '500', textAlign: 'right' }}>{formatPercentage(costs_outcomes?.completion?.outcome_percentage?.all_students?.['8yr']?.award)}</td></tr>
-                      <tr><td style={{ padding: '0.25rem 0', color: '#6b7280' }}>Still Enrolled</td><td style={{ fontWeight: '500', textAlign: 'right' }}>{formatPercentage(costs_outcomes?.completion?.outcome_percentage?.all_students?.['8yr']?.still_enrolled)}</td></tr>
-                      <tr><td style={{ padding: '0.25rem 0', color: '#6b7280' }}>Transferred</td><td style={{ fontWeight: '500', textAlign: 'right' }}>{formatPercentage(costs_outcomes?.completion?.outcome_percentage?.all_students?.['8yr']?.transfer)}</td></tr>
-                      <tr><td style={{ padding: '0.25rem 0', color: '#6b7280' }}>Unknown</td><td style={{ fontWeight: '500', textAlign: 'right' }}>{formatPercentage(costs_outcomes?.completion?.outcome_percentage?.all_students?.['8yr']?.unknown)}</td></tr>
-                    </tbody>
-                  </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div>
-                <h4 style={{ fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>Endowment & Resources</h4>
-                <table style={{ width: '100%' }}>
-                  <tbody>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Endowment (Beginning)</td><td style={{ fontWeight: '500' }}>{formatCurrency(school.endowment?.begin)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Endowment (End)</td><td style={{ fontWeight: '500' }}>{formatCurrency(school.endowment?.end)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Faculty Salary</td><td style={{ fontWeight: '500' }}>{formatCurrency(school.faculty_salary)}</td></tr>
-                    <tr><td style={{ padding: '0.5rem 0', color: '#6b7280' }}>Tuition Revenue per FTE</td><td style={{ fontWeight: '500' }}>{formatCurrency(school.tuition_revenue_per_fte)}</td></tr>
-                  </tbody>
-                </table>
+            </div>
+          )}
+
+          {activeTab === 'outcomes' && (
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Student Outcomes</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-semibold mb-3">Loan Repayment & Default</h4>
+                  <div className="space-y-2">
+                    <div className="metric-row">
+                      <span className="metric-label">3-Year Default Rate</span>
+                      <span className="metric-value">{formatPercentage(costs_outcomes?.repayment?.['3_yr_default_rate'])}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Default Rate Denominator</span>
+                      <span className="metric-value">{costs_outcomes?.repayment?.['3_yr_default_rate_denom']?.toLocaleString() || 'N/A'}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Completion Outcomes */}
+                  <div className="mt-6">
+                    <h5 className="font-semibold mb-3">Completion Outcomes (8 Year)</h5>
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600">Award Received</span>
+                        <span className="font-semibold">{formatPercentage(costs_outcomes?.completion?.outcome_percentage?.all_students?.['8yr']?.award)}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600">Still Enrolled</span>
+                        <span className="font-semibold">{formatPercentage(costs_outcomes?.completion?.outcome_percentage?.all_students?.['8yr']?.still_enrolled)}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600">Transferred</span>
+                        <span className="font-semibold">{formatPercentage(costs_outcomes?.completion?.outcome_percentage?.all_students?.['8yr']?.transfer)}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-gray-600">Unknown</span>
+                        <span className="font-semibold">{formatPercentage(costs_outcomes?.completion?.outcome_percentage?.all_students?.['8yr']?.unknown)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-3">Endowment & Resources</h4>
+                  <div className="space-y-2">
+                    <div className="metric-row">
+                      <span className="metric-label">Endowment (Beginning)</span>
+                      <span className="metric-value">{formatCurrency(school.endowment?.begin)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Endowment (End)</span>
+                      <span className="metric-value">{formatCurrency(school.endowment?.end)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Faculty Salary</span>
+                      <span className="metric-value">{formatCurrency(school.faculty_salary)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Tuition Revenue per FTE</span>
+                      <span className="metric-value">{formatCurrency(school.tuition_revenue_per_fte)}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       
       {/* Year Info */}
-      <div className="text-sm text-gray mt-4 text-center">
+      <div className="text-sm text-gray mt-6 text-center">
         Data Year: {year} • Last Updated: {new Date(basic_info?.last_updated?.$date || Date.now()).toLocaleDateString()}
       </div>
     </div>

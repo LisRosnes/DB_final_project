@@ -1,7 +1,15 @@
 import React from 'react';
-import { School } from '../types';
-import { formatCurrency, formatPercentage, formatNumber, getOwnershipLabel, getOwnershipColor } from '../utils/helpers';
 import { useNavigate } from 'react-router-dom';
+import { School } from '../types';
+import { 
+  formatCurrency, 
+  formatPercentage, 
+  formatNumberCompact, 
+  getOwnershipLabel,
+  getOwnershipColor,
+  getSelectivityLabel,
+  getSelectivityColor,
+} from '../utils/helpers';
 
 interface SchoolCardProps {
   school: School;
@@ -10,166 +18,164 @@ interface SchoolCardProps {
   showCompareButton?: boolean;
 }
 
-const SchoolCard: React.FC<SchoolCardProps> = ({ 
-  school, 
-  onCompare, 
+const SchoolCard: React.FC<SchoolCardProps> = ({
+  school,
+  onCompare,
   isSelected = false,
-  showCompareButton = true 
+  showCompareButton = true,
 }) => {
   const navigate = useNavigate();
-  
-  // Safety check for required data
-  if (!school || !school.school) {
+
+  if (!school?.school || !school?.latest) {
     return null;
   }
 
   const ownershipColor = getOwnershipColor(school.school.ownership);
+  const admissionRate = school.latest.admission_rate;
+  const selectivityColor = getSelectivityColor(admissionRate);
 
-  // Helper to get nested values safely
-  const getLatestValue = (path: string) => {
-    if (!school.latest) return undefined;
-    const parts = path.split('.');
-    let value: any = school.latest;
-    for (const part of parts) {
-      value = value?.[part];
-    }
-    return value;
-  };
-
-  // Format website URL properly
-  const formatWebsiteUrl = (url: string | undefined): string => {
-    if (!url) return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-    return `https://${url}`;
-  };
-
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Don't navigate if clicking on buttons or links
-    if ((e.target as HTMLElement).closest('button, a')) {
-      return;
-    }
+  const handleCardClick = () => {
     navigate(`/school/${school.school_id}`);
   };
 
   const handleCompareClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onCompare) {
-      onCompare(school.school_id);
-    }
-  };
-
-  const handleWebsiteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    onCompare?.(school.school_id);
   };
 
   return (
-    <div
-      className="card clickable"
-      style={{ 
-        cursor: 'pointer',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-      }}
-      onClick={handleCardClick}
-      onMouseOver={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-      }}
-      onMouseOut={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '';
-      }}
-    >
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h3 className="text-xl font-bold">{school.school.name}</h3>
-          <p className="text-sm text-gray">
-            {school.school.city}, {school.school.state}
+    <div className="school-card" onClick={handleCardClick}>
+      {/* Header */}
+      <div className="school-card-header">
+        <div style={{ flex: 1 }}>
+          <h3 className="school-card-name">{school.school.name}</h3>
+          <p className="school-card-location">
+             {school.school.city}, {school.school.state}
           </p>
         </div>
-        <span 
-          className="badge" 
-          style={{ backgroundColor: `${ownershipColor}20`, color: ownershipColor }}
+        <span
+          className="badge"
+          style={{
+            backgroundColor: `${ownershipColor}15`,
+            color: ownershipColor,
+            fontWeight: 600,
+          }}
         >
           {getOwnershipLabel(school.school.ownership)}
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {/* Cost */}
-        <div>
-          <p className="text-sm text-gray">Avg. Net Price</p>
-          <p className="font-semibold">
-            {formatCurrency(getLatestValue('avg_net_price') || getLatestValue('cost.avg_net_price.overall'))}
-          </p>
+      {/* Stats Grid */}
+      <div className="school-card-stats">
+        {/* Net Price */}
+        <div className="school-card-stat">
+          <div className="school-card-stat-label"> Avg Net Price</div>
+          <div className="school-card-stat-value">
+            {formatCurrency(school.latest.avg_net_price || school.latest.tuition_in_state)}
+          </div>
         </div>
 
         {/* Admission Rate */}
-        <div>
-          <p className="text-sm text-gray">Admission Rate</p>
-          <p className="font-semibold">
-            {formatPercentage(getLatestValue('admission_rate') || getLatestValue('admissions.admission_rate.overall'))}
-          </p>
+        <div className="school-card-stat">
+          <div className="school-card-stat-label"> Admission Rate</div>
+          <div className="school-card-stat-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {formatPercentage(admissionRate)}
+            {admissionRate !== undefined && admissionRate !== null && (
+              <span
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  padding: '2px 6px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: `${selectivityColor}15`,
+                  color: selectivityColor,
+                  fontWeight: 500,
+                }}
+              >
+                {getSelectivityLabel(admissionRate)}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Completion Rate */}
-        <div>
-          <p className="text-sm text-gray">Completion Rate</p>
-          <p className="font-semibold">
-            {formatPercentage(getLatestValue('completion_rate_4yr') || getLatestValue('completion.completion_rate_4yr_150nt'))}
-          </p>
+        <div className="school-card-stat">
+          <div className="school-card-stat-label"> Completion Rate</div>
+          <div className="school-card-stat-value">
+            {formatPercentage(school.latest.completion_rate_overall || school.latest.completion_rate_4yr)}
+          </div>
+          {(school.latest.completion_rate_overall || school.latest.completion_rate_4yr) && (
+            <div className="progress-bar" style={{ marginTop: '8px', height: '6px' }}>
+              <div
+                className="progress-bar-fill"
+                style={{
+                  width: `${(school.latest.completion_rate_overall || school.latest.completion_rate_4yr || 0) * 100}%`,
+                }}
+              />
+            </div>
+          )}
         </div>
 
-        {/* Size */}
-        <div>
-          <p className="text-sm text-gray">Size</p>
-          <p className="font-semibold">
-            {formatNumber(getLatestValue('student.size') || getLatestValue('size') || 0)} students
-          </p>
+        {/* Student Size */}
+        <div className="school-card-stat">
+          <div className="school-card-stat-label">Enrollment</div>
+          <div className="school-card-stat-value">
+            {formatNumberCompact(school.latest.size)} students
+          </div>
         </div>
-
-        {/* SAT Average */}
-        {getLatestValue('sat_avg') && (
-          <div>
-            <p className="text-sm text-gray">SAT Avg.</p>
-            <p className="font-semibold">{getLatestValue('sat_avg')}</p>
-          </div>
-        )}
-
-        {/* Earnings */}
-        {getLatestValue('median_earnings_10yr') && (
-          <div>
-            <p className="text-sm text-gray">Earnings (10yr)</p>
-            <p className="font-semibold" style={{ color: '#10b981' }}>
-              {formatCurrency(getLatestValue('median_earnings_10yr'))}
-            </p>
-          </div>
-        )}
       </div>
 
-      <div className="mt-4 flex gap-2">
-        {showCompareButton && onCompare && (
-          <button
-            className={`btn ${isSelected ? 'btn-secondary' : 'btn-outline'}`}
-            style={{ flex: 1 }}
-            onClick={handleCompareClick}
-          >
-            {isSelected ? '✓ Selected' : 'Add to Compare'}
-          </button>
-        )}
+      {/* SAT Score if available */}
+      {school.latest.sat_avg && (
+        <div style={{ 
+          marginTop: 'var(--space-4)', 
+          padding: 'var(--space-3) var(--space-4)',
+          background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%)',
+          borderRadius: 'var(--radius-md)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          color: 'white',
+        }}>
+          <span style={{ fontSize: 'var(--text-sm)', opacity: 0.9 }}> SAT Average</span>
+          <span style={{ fontWeight: 700, fontSize: 'var(--text-lg)' }}>{school.latest.sat_avg}</span>
+        </div>
+      )}
 
+      {/* Actions */}
+      <div style={{ 
+        marginTop: 'var(--space-4)', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between' 
+      }}>
         {school.school.school_url && (
           <a
-            href={formatWebsiteUrl(school.school.school_url)}
+            href={`https://${school.school.school_url.replace(/^https?:\/\//, '')}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn btn-outline"
-            onClick={handleWebsiteClick}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+            className="btn btn-ghost btn-sm"
+            onClick={(e) => e.stopPropagation()}
+            style={{ color: 'var(--color-primary)' }}
           >
-            Website →
+            Visit Website →
           </a>
+        )}
+
+        {showCompareButton && onCompare && (
+          <button
+            className={`btn btn-sm ${isSelected ? 'btn-accent' : 'btn-outline'}`}
+            onClick={handleCompareClick}
+          >
+            {isSelected ? (
+              <>
+                <span>✓</span> Selected
+              </>
+            ) : (
+              <>
+                <span>+</span> Compare
+              </>
+            )}
+          </button>
         )}
       </div>
     </div>

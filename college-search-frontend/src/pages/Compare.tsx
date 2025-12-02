@@ -1,54 +1,40 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { ComparisonData } from '../types';
 import { schoolsAPI } from '../services/api';
-import { loadFromLocalStorage, formatCurrency, formatPercentage, formatNumber, getOwnershipLabel, getOwnershipColor } from '../utils/helpers';
-import c3 from 'c3';
-
-type ViewMode = 'cards' | 'table' | 'charts';
-type ChartMetric = 'cost' | 'earnings' | 'completion' | 'size';
+import {
+  loadFromLocalStorage,
+  saveToLocalStorage,
+  formatCurrency,
+  formatPercentage,
+  formatNumber,
+  getOwnershipLabel,
+  getOwnershipColor,
+  calculateROI,
+  getROIColor,
+} from '../utils/helpers';
 
 const Compare: React.FC = () => {
   const [compareList, setCompareList] = useState<number[]>([]);
   const [comparisonData, setComparisonData] = useState<ComparisonData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('cards');
-  const [chartMetric, setChartMetric] = useState<ChartMetric>('cost');
-  const [highlightedSchool, setHighlightedSchool] = useState<number | null>(null);
-  
-  const chartRef = useRef<HTMLDivElement>(null);
-  const chartInstance = useRef<any>(null);
+  const [activeView, setActiveView] = useState<'table' | 'charts'>('table');
 
   useEffect(() => {
     const saved = loadFromLocalStorage<number[]>('compareList', []);
     setCompareList(saved);
-    
+
     if (saved.length > 0) {
       loadComparisonData(saved);
     }
   }, []);
 
-  // Chart effect
-  useEffect(() => {
-    if (viewMode === 'charts' && comparisonData.length > 0 && chartRef.current) {
-      renderChart();
-    }
-    
-    return () => {
-      if (chartInstance.current) {
-        try {
-          chartInstance.current.destroy();
-        } catch (e) {}
-        chartInstance.current = null;
-      }
-    };
-  }, [viewMode, chartMetric, comparisonData]);
-
   const loadComparisonData = async (schoolIds: number[]) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await schoolsAPI.compare(schoolIds);
+      const response = await schoolsAPI.compare(schoolIds, 2023);
       setComparisonData(response.schools);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load comparison data');
@@ -59,137 +45,41 @@ const Compare: React.FC = () => {
   };
 
   const handleRemove = (schoolId: number) => {
-    const newList = compareList.filter(id => id !== schoolId);
+    const newList = compareList.filter((id) => id !== schoolId);
     setCompareList(newList);
-    localStorage.setItem('compareList', JSON.stringify(newList));
-    
+    saveToLocalStorage('compareList', newList);
+
     if (newList.length > 0) {
-      loadComparisonData(newList);
+      setComparisonData(comparisonData.filter((d) => d.school_id !== schoolId));
     } else {
       setComparisonData([]);
     }
   };
 
-  const formatWebsiteUrl = (url: string | undefined): string => {
-    if (!url) return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-    return `https://${url}`;
+  const handleClearAll = () => {
+    setCompareList([]);
+    setComparisonData([]);
+    saveToLocalStorage('compareList', []);
   };
 
-  // Helper to get latest values safely - using normalized fields
-  // Simpler version with type assertion
-  const getLatestValue = (data: ComparisonData, field: string) => {
-    const latest = data.basic_info?.latest;
-    if (!latest) return undefined;
-    
-    // Type assertion - we know these fields exist from the backend normalization
-    return (latest as any)[field];
-  };
-
-  const renderChart = () => {
-    if (chartInstance.current) {
-      try {
-        chartInstance.current.destroy();
-      } catch (e) {}
-      chartInstance.current = null;
-    }
-
-    if (!chartRef.current) return;
-
-    const names = comparisonData.map(d => 
-      d.basic_info.school.name.length > 25 
-        ? d.basic_info.school.name.substring(0, 22) + '...'
-        : d.basic_info.school.name
-    );
-
-    let values: number[] = [];
-    let label = '';
-    let color = '#3b82f6';
-    let formatter = (v: number) => v.toString();
-
-    switch (chartMetric) {
-      case 'cost':
-        values = comparisonData.map(d => getLatestValue(d, 'avg_net_price') || 0);
-        label = 'Average Net Price ($)';
-        color = '#f59e0b';
-        formatter = (v) => `$${(v / 1000).toFixed(0)}K`;
-        break;
-      case 'earnings':
-        values = comparisonData.map(d => getLatestValue(d, 'median_earnings_10yr') || 0);
-        label = 'Median Earnings 10yr ($)';
-        color = '#10b981';
-        formatter = (v) => `$${(v / 1000).toFixed(0)}K`;
-        break;
-      case 'completion':
-        values = comparisonData.map(d => (getLatestValue(d, 'completion_rate_4yr') || 0) * 100);
-        label = 'Graduation Rate (%)';
-        color = '#8b5cf6';
-        formatter = (v) => `${v.toFixed(0)}%`;
-        break;
-      case 'size':
-        values = comparisonData.map(d => getLatestValue(d, 'size') || 0);
-        label = 'Student Population';
-        color = '#3b82f6';
-        formatter = (v) => v.toLocaleString();
-        break;
-    }
-
-    chartInstance.current = c3.generate({
-      bindto: chartRef.current,
-      data: {
-        columns: [[label, ...values]],
-        type: 'bar',
-        colors: { [label]: color },
-      },
-      axis: {
-        x: {
-          type: 'category',
-          categories: names,
-          tick: { rotate: -30, multiline: false },
-          height: 80,
-        },
-        y: {
-          label: { text: label, position: 'outer-middle' },
-          tick: { format: formatter },
-        },
-      },
-      bar: { width: { ratio: 0.6 } },
-      legend: { show: false },
-      tooltip: {
-        format: {
-          value: (value: any) => formatter(value),
-        },
-      },
-    });
-  };
-
-  const getWinner = (field: string, higherIsBetter: boolean = true): number | null => {
-    if (comparisonData.length < 2) return null;
-    
-    let bestValue = higherIsBetter ? -Infinity : Infinity;
-    let winnerId = null;
-    
-    comparisonData.forEach(data => {
-      const value = getLatestValue(data, field);
-      if (value !== null && value !== undefined) {
-        if ((higherIsBetter && value > bestValue) || (!higherIsBetter && value < bestValue)) {
-          bestValue = value;
-          winnerId = data.school_id;
-        }
-      }
-    });
-    
-    return winnerId;
+  // Get the best value for highlighting
+  const getBestValue = (
+    getData: (d: ComparisonData) => number | undefined,
+    lowerIsBetter = false
+  ): number | undefined => {
+    const values = comparisonData.map((d) => getData(d)).filter((v) => v !== undefined) as number[];
+    if (values.length === 0) return undefined;
+    return lowerIsBetter ? Math.min(...values) : Math.max(...values);
   };
 
   if (loading) {
     return (
-      <div className="container" style={{ paddingTop: '2rem' }}>
-        <div className="loading">
-          <div className="spinner"></div>
-          <p className="mt-4">Loading comparison data...</p>
+      <div className="main-content">
+        <div className="container">
+          <div className="loading-wrapper">
+            <div className="spinner" />
+            <p className="text-gray">Loading comparison data...</p>
+          </div>
         </div>
       </div>
     );
@@ -197,17 +87,18 @@ const Compare: React.FC = () => {
 
   if (compareList.length === 0) {
     return (
-      <div className="container" style={{ paddingTop: '2rem' }}>
-        <div className="card text-center" style={{ padding: '3rem' }}>
-          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}></div>
-          <h2 className="text-xl font-bold mb-4">No Schools Selected</h2>
-          <p className="text-gray mb-4">
-            You haven't selected any schools to compare yet.<br/>
-            Browse schools and click "Add to Compare" to get started.
-          </p>
-          <a href="/" className="btn btn-primary">
-            Browse Schools
-          </a>
+      <div className="main-content">
+        <div className="container">
+          <div className="card text-center" style={{ padding: 'var(--space-12)' }}>
+            <div className="empty-state-icon">⚖️</div>
+            <h2 style={{ marginBottom: 'var(--space-4)' }}>No Schools Selected</h2>
+            <p className="text-gray mb-6">
+              You haven't selected any schools to compare yet. Browse schools and click "Add to Compare" to get started.
+            </p>
+            <Link to="/" className="btn btn-primary">
+              Browse Schools
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -215,350 +106,430 @@ const Compare: React.FC = () => {
 
   if (error) {
     return (
-      <div className="container" style={{ paddingTop: '2rem' }}>
-        <div className="error">
-          <strong>Error:</strong> {error}
+      <div className="main-content">
+        <div className="container">
+          <div className="alert alert-danger mb-6">{error}</div>
+          <Link to="/" className="btn btn-primary">
+            Back to Search
+          </Link>
         </div>
-        <a href="/" className="btn btn-primary mt-4">
-          Back to Search
-        </a>
       </div>
     );
   }
 
+  // Metrics for comparison
+  const metrics: Array<{
+    label: string;
+    icon: string;
+    getValue: (d: ComparisonData) => number | string | undefined;
+    format: (v: any) => string;
+    lowerIsBetter?: boolean;
+    highlight?: boolean;
+  }> = [
+    {
+      label: 'Average Net Price',
+      icon: '',
+      getValue: (d) => d.basic_info.latest.avg_net_price || d.basic_info.latest.tuition_in_state,
+      format: formatCurrency,
+      lowerIsBetter: true,
+      highlight: true,
+    },
+    {
+      label: 'In-State Tuition',
+      icon: '',
+      getValue: (d) => d.basic_info.latest.tuition_in_state,
+      format: formatCurrency,
+      lowerIsBetter: true,
+    },
+    {
+      label: 'Out-of-State Tuition',
+      icon: '',
+      getValue: (d) => d.basic_info.latest.tuition_out_of_state,
+      format: formatCurrency,
+      lowerIsBetter: true,
+    },
+    {
+      label: 'Admission Rate',
+      icon: '',
+      getValue: (d) => d.basic_info.latest.admission_rate,
+      format: formatPercentage,
+    },
+    {
+      label: 'Completion Rate',
+      icon: '',
+      getValue: (d) => d.basic_info.latest.completion_rate_overall || d.basic_info.latest.completion_rate_4yr,
+      format: formatPercentage,
+      highlight: true,
+    },
+    {
+      label: 'Median Earnings (10yr)',
+      icon: '',
+      getValue: (d) => d.basic_info.latest.median_earnings_10yr,
+      format: formatCurrency,
+      highlight: true,
+    },
+    {
+      label: 'SAT Average',
+      icon: '',
+      getValue: (d) => d.basic_info.latest.sat_avg,
+      format: (v) => v?.toString() || 'N/A',
+    },
+    {
+      label: 'Student Size',
+      icon: '',
+      getValue: (d) => d.basic_info.latest.size,
+      format: formatNumber,
+    },
+    {
+      label: 'Pell Grant Rate',
+      icon: '',
+      getValue: (d) => d.basic_info.latest.pell_grant_rate,
+      format: formatPercentage,
+    },
+    {
+      label: 'Median Debt',
+      icon: '',
+      getValue: (d) => d.basic_info.latest.median_debt,
+      format: formatCurrency,
+      lowerIsBetter: true,
+    },
+    {
+      label: 'Default Rate',
+      icon: '',
+      getValue: (d) => d.basic_info.latest.default_rate_3yr,
+      format: formatPercentage,
+      lowerIsBetter: true,
+    },
+  ];
+
+  // Calculate ROI for each school
+  const roiData = comparisonData.map((d) => {
+    const cost = d.basic_info.latest.avg_net_price || d.basic_info.latest.tuition_in_state || 0;
+    const earnings = d.basic_info.latest.median_earnings_10yr || 0;
+    return {
+      schoolId: d.school_id,
+      name: d.basic_info.school.name,
+      roi: calculateROI(earnings, cost),
+    };
+  });
+
+  const maxROI = Math.max(...roiData.map((d) => d.roi));
+
   return (
-    <div className="container" style={{ paddingTop: '2rem', paddingBottom: '2rem' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h1 className="text-2xl font-bold mb-2">Compare Schools</h1>
-          <p className="text-gray">
-            Comparing {comparisonData.length} school{comparisonData.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-        
-        {/* View Mode Toggle */}
-        <div style={{ display: 'flex', gap: '0.5rem', background: '#f3f4f6', borderRadius: '0.5rem', padding: '0.25rem' }}>
-          {(['cards', 'table', 'charts'] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              style={{
-                padding: '0.5rem 1rem',
-                border: 'none',
-                background: viewMode === mode ? 'white' : 'transparent',
-                borderRadius: '0.375rem',
-                cursor: 'pointer',
-                fontWeight: viewMode === mode ? '600' : '400',
-                boxShadow: viewMode === mode ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                textTransform: 'capitalize'
-              }}
-            >
-              {mode === 'cards' ? ' Cards' : mode === 'table' ? ' Table' : ' Charts'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Cards View */}
-      {viewMode === 'cards' && (
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(comparisonData.length, 3)}, 1fr)`, gap: '1.5rem' }}>
-          {comparisonData.map((data) => {
-            const ownershipColor = getOwnershipColor(data.basic_info.school.ownership);
-            const isHighlighted = highlightedSchool === data.school_id;
-            
-            return (
-              <div
-                key={data.school_id}
-                className="card"
-                style={{
-                  borderTop: `4px solid ${ownershipColor}`,
-                  transform: isHighlighted ? 'scale(1.02)' : 'scale(1)',
-                  boxShadow: isHighlighted ? '0 8px 25px rgba(0,0,0,0.15)' : '',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={() => setHighlightedSchool(data.school_id)}
-                onMouseLeave={() => setHighlightedSchool(null)}
-              >
-                {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                  <div>
-                    <h3 style={{ fontWeight: '600', fontSize: '1.1rem' }}>{data.basic_info.school.name}</h3>
-                    <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                      {data.basic_info.school.city}, {data.basic_info.school.state}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleRemove(data.school_id)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#ef4444',
-                      cursor: 'pointer',
-                      fontSize: '1.25rem',
-                      padding: '0.25rem'
-                    }}
-                    title="Remove from comparison"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                {/* Stats */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <MetricRow
-                    label="Net Price"
-                    value={formatCurrency(getLatestValue(data, 'avg_net_price'))}
-                    isWinner={getWinner('avg_net_price', false) === data.school_id}
-                    color="#f59e0b"
-                  />
-                  <MetricRow
-                    label="Earnings (10yr)"
-                    value={formatCurrency(getLatestValue(data, 'median_earnings_10yr'))}
-                    isWinner={getWinner('median_earnings_10yr', true) === data.school_id}
-                    color="#10b981"
-                  />
-                  <MetricRow
-                    label="Graduation Rate"
-                    value={formatPercentage(getLatestValue(data, 'completion_rate_4yr'))}
-                    isWinner={getWinner('completion_rate_4yr', true) === data.school_id}
-                    color="#8b5cf6"
-                  />
-                  <MetricRow
-                    label="Acceptance Rate"
-                    value={formatPercentage(getLatestValue(data, 'admission_rate'))}
-                    isWinner={getWinner('admission_rate', false) === data.school_id}
-                    color="#3b82f6"
-                  />
-                  <MetricRow
-                    label="Student Size"
-                    value={formatNumber(getLatestValue(data, 'size'))}
-                    color="#6b7280"
-                  />
-                  <MetricRow
-                    label="SAT Average"
-                    value={getLatestValue(data, 'sat_avg')?.toString() || 'N/A'}
-                    isWinner={getWinner('sat_avg', true) === data.school_id}
-                    color="#ec4899"
-                  />
-                </div>
-
-                {/* Actions */}
-                <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-                  <a
-                    href={`school/${data.school_id}`}
-                    className="btn btn-outline"
-                    style={{ flex: 1, textAlign: 'center' }}
-                  >
-                    View Details
-                  </a>
-                  {data.basic_info.school.school_url && (
-                    <a
-                      href={formatWebsiteUrl(data.basic_info.school.school_url)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-outline"
-                    >
-                      Website →
-                    </a>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Table View */}
-      {viewMode === 'table' && (
-        <div style={{ overflowX: 'auto' }}>
-          <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: '#f9fafb' }}>
-                <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600' }}>Metric</th>
-                {comparisonData.map((data) => (
-                  <th key={data.school_id} style={{ padding: '1rem', textAlign: 'center', minWidth: '180px' }}>
-                    <div style={{ fontWeight: '600' }}>{data.basic_info.school.name}</div>
-                    <div style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '400' }}>
-                      {data.basic_info.school.city}, {data.basic_info.school.state}
-                    </div>
-                    <button
-                      onClick={() => handleRemove(data.school_id)}
-                      style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', marginTop: '0.25rem' }}
-                    >
-                      Remove
-                    </button>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { label: 'Type', getValue: (d: ComparisonData) => getOwnershipLabel(d.basic_info.school.ownership) },
-                { label: 'Student Size', field: 'size', format: formatNumber },
-                { label: 'Acceptance Rate', field: 'admission_rate', format: formatPercentage, lowerBetter: true },
-                { label: 'SAT Average', field: 'sat_avg' },
-                { label: 'ACT Midpoint', field: 'act_avg' },
-                { label: 'Net Price', field: 'avg_net_price', format: formatCurrency, lowerBetter: true },
-                { label: 'In-State Tuition', field: 'tuition_in_state', format: formatCurrency },
-                { label: 'Out-of-State Tuition', field: 'tuition_out_of_state', format: formatCurrency },
-                { label: 'Graduation Rate', field: 'completion_rate_4yr', format: formatPercentage },
-                { label: 'Earnings (6yr)', field: 'median_earnings_6yr', format: formatCurrency },
-                { label: 'Earnings (10yr)', field: 'median_earnings_10yr', format: formatCurrency },
-                { label: 'Median Debt', field: 'median_debt', format: formatCurrency, lowerBetter: true },
-                { label: 'Pell Grant Rate', field: 'pell_grant_rate', format: formatPercentage },
-                { label: 'Default Rate (3yr)', field: 'default_rate_3yr', format: formatPercentage, lowerBetter: true },
-              ].map((row) => {
-                const winner = row.field ? getWinner(row.field, !row.lowerBetter) : null;
-                return (
-                  <tr key={row.label} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                    <td style={{ padding: '0.75rem 1rem', fontWeight: '500' }}>{row.label}</td>
-                    {comparisonData.map((data) => {
-                      const value = row.getValue 
-                        ? row.getValue(data) 
-                        : row.field 
-                          ? getLatestValue(data, row.field) 
-                          : null;
-                      const formatted = row.format && value !== null && value !== undefined
-                        ? row.format(value)
-                        : value ?? 'N/A';
-                      const isWinner = winner === data.school_id;
-                      
-                      return (
-                        <td
-                          key={data.school_id}
-                          style={{
-                            padding: '0.75rem 1rem',
-                            textAlign: 'center',
-                            background: isWinner ? '#dcfce7' : 'transparent',
-                            fontWeight: isWinner ? '600' : '400',
-                            color: isWinner ? '#166534' : 'inherit'
-                          }}
-                        >
-                          {formatted}
-                          {isWinner && ' 🏆'}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Charts View */}
-      {viewMode === 'charts' && (
-        <div>
-          {/* Metric Selector */}
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-            {([
-              { key: 'cost', label: ' Cost', color: '#f59e0b' },
-              { key: 'earnings', label: ' Earnings', color: '#10b981' },
-              { key: 'completion', label: ' Graduation', color: '#8b5cf6' },
-              { key: 'size', label: ' Size', color: '#3b82f6' },
-            ] as const).map((metric) => (
+    <div className="main-content">
+      <div className="container">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 style={{ marginBottom: 'var(--space-2)' }}>Compare Schools</h1>
+            <p className="text-gray">
+              Side-by-side comparison of {comparisonData.length} school{comparisonData.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <div className="flex gap-1" style={{ background: 'var(--color-gray-100)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
               <button
-                key={metric.key}
-                onClick={() => setChartMetric(metric.key)}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  border: chartMetric === metric.key ? `2px solid ${metric.color}` : '2px solid #e5e7eb',
-                  background: chartMetric === metric.key ? `${metric.color}15` : 'white',
-                  borderRadius: '0.5rem',
-                  cursor: 'pointer',
-                  fontWeight: chartMetric === metric.key ? '600' : '400',
-                  color: chartMetric === metric.key ? metric.color : '#374151'
-                }}
+                className={`btn btn-sm ${activeView === 'table' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setActiveView('table')}
               >
-                {metric.label}
+                 Table
               </button>
-            ))}
-          </div>
-
-          {/* Chart */}
-          <div className="card">
-            <div ref={chartRef} style={{ height: '400px' }}></div>
-          </div>
-
-          {/* Summary Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
-            {comparisonData.map((data) => (
-              <div
-                key={data.school_id}
-                className="card"
-                style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              <button
+                className={`btn btn-sm ${activeView === 'charts' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setActiveView('charts')}
               >
-                <div>
-                  <div style={{ fontWeight: '600' }}>{data.basic_info.school.name}</div>
-                  <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                    {data.basic_info.school.city}, {data.basic_info.school.state}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleRemove(data.school_id)}
-                  style={{
-                    background: '#fee2e2',
-                    border: 'none',
-                    color: '#dc2626',
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: '0.375rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+                 Charts
+              </button>
+            </div>
+            <button className="btn btn-outline" onClick={handleClearAll}>
+              Clear All
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Footer Actions */}
-      <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-        <a href="/" className="btn btn-outline">
-          ← Add More Schools
-        </a>
-        <button
-          onClick={() => {
-            localStorage.removeItem('compareList');
-            setCompareList([]);
-            setComparisonData([]);
-          }}
-          className="btn"
-          style={{ background: '#fee2e2', color: '#dc2626', border: 'none' }}
-        >
-          Clear All
-        </button>
+        {activeView === 'table' ? (
+          /* Table View */
+          <div className="table-wrapper" style={{ marginBottom: 'var(--space-6)' }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th style={{ minWidth: '180px', position: 'sticky', left: 0, background: 'var(--color-gray-50)', zIndex: 1 }}>
+                    Metric
+                  </th>
+                  {comparisonData.map((data) => (
+                    <th key={data.school_id} style={{ minWidth: '200px' }}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <div style={{ fontWeight: 700, color: 'var(--color-gray-900)' }}>
+                            {data.basic_info.school.name}
+                          </div>
+                          <div className="text-sm text-gray font-normal">
+                            {data.basic_info.school.city}, {data.basic_info.school.state}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleRemove(data.school_id)}
+                          className="btn btn-icon btn-ghost"
+                          style={{ color: 'var(--color-danger)' }}
+                          title="Remove"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {/* Type Row */}
+                <tr>
+                  <td style={{ position: 'sticky', left: 0, background: 'var(--color-white)', fontWeight: 600 }}>
+                     Type
+                  </td>
+                  {comparisonData.map((data) => (
+                    <td key={data.school_id}>
+                      <span
+                        className="badge"
+                        style={{
+                          backgroundColor: `${getOwnershipColor(data.basic_info.school.ownership)}15`,
+                          color: getOwnershipColor(data.basic_info.school.ownership),
+                        }}
+                      >
+                        {getOwnershipLabel(data.basic_info.school.ownership)}
+                      </span>
+                    </td>
+                  ))}
+                </tr>
+
+                {/* ROI Row */}
+                <tr style={{ background: 'var(--color-gray-50)' }}>
+                  <td style={{ position: 'sticky', left: 0, background: 'var(--color-gray-50)', fontWeight: 600 }}>
+                     10-Year ROI
+                  </td>
+                  {roiData.map((data) => (
+                    <td key={data.schoolId}>
+                      <span
+                        style={{
+                          fontSize: 'var(--text-xl)',
+                          fontWeight: 700,
+                          color: getROIColor(data.roi),
+                        }}
+                      >
+                        {data.roi > 0 ? '+' : ''}{data.roi.toFixed(0)}%
+                      </span>
+                      {data.roi === maxROI && (
+                        <span className="badge badge-success ml-2">Best</span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Metric Rows */}
+                {metrics.map((metric, idx) => {
+                  const best = getBestValue(
+                    (d) => {
+                      const v = metric.getValue(d);
+                      return typeof v === 'number' ? v : undefined;
+                    },
+                    metric.lowerIsBetter
+                  );
+
+                  return (
+                    <tr key={idx}>
+                      <td style={{ position: 'sticky', left: 0, background: 'var(--color-white)', fontWeight: 600 }}>
+                        {metric.icon} {metric.label}
+                      </td>
+                      {comparisonData.map((data) => {
+                        const value = metric.getValue(data);
+                        const numValue = typeof value === 'number' ? value : undefined;
+                        const isBest = numValue !== undefined && numValue === best;
+
+                        return (
+                          <td key={data.school_id}>
+                            <span
+                              style={{
+                                fontWeight: isBest ? 700 : 400,
+                                color: isBest && metric.highlight ? 'var(--color-success)' : undefined,
+                              }}
+                            >
+                              {value !== undefined ? metric.format(value) : 'N/A'}
+                            </span>
+                            {isBest && metric.highlight && (
+                              <span className="badge badge-success ml-2">Best</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+
+                {/* Website Row */}
+                <tr>
+                  <td style={{ position: 'sticky', left: 0, background: 'var(--color-white)', fontWeight: 600 }}>
+                    Website
+                  </td>
+                  {comparisonData.map((data) => (
+                    <td key={data.school_id}>
+                      {data.basic_info.school.school_url ? (
+                        <a
+                          href={`https://${data.basic_info.school.school_url.replace(/^https?:\/\//, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-sm btn-outline"
+                        >
+                          Visit →
+                        </a>
+                      ) : (
+                        'N/A'
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          /* Charts View */
+          <div className="grid grid-cols-2 gap-6">
+            {/* ROI Comparison */}
+            <div className="card">
+              <div className="card-header">Return on Investment (10-Year)</div>
+              <div className="card-body">
+                {roiData.map((data) => (
+                  <div key={data.schoolId} style={{ marginBottom: 'var(--space-4)' }}>
+                    <div className="flex justify-between items-center mb-2">
+                      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>
+                        {data.name.length > 25 ? data.name.substring(0, 25) + '...' : data.name}
+                      </span>
+                      <span style={{ fontWeight: 700, color: getROIColor(data.roi) }}>
+                        {data.roi > 0 ? '+' : ''}{data.roi.toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="progress-bar" style={{ height: '12px' }}>
+                      <div
+                        className="progress-bar-fill"
+                        style={{
+                          width: `${Math.min((data.roi / (maxROI > 0 ? maxROI : 100)) * 100, 100)}%`,
+                          background: getROIColor(data.roi),
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Cost Comparison */}
+            <div className="card">
+              <div className="card-header">💰 Average Net Price</div>
+              <div className="card-body">
+                {comparisonData.map((data) => {
+                  const cost = data.basic_info.latest.avg_net_price || data.basic_info.latest.tuition_in_state || 0;
+                  const maxCost = Math.max(
+                    ...comparisonData.map((d) => d.basic_info.latest.avg_net_price || d.basic_info.latest.tuition_in_state || 0)
+                  );
+                  return (
+                    <div key={data.school_id} style={{ marginBottom: 'var(--space-4)' }}>
+                      <div className="flex justify-between items-center mb-2">
+                        <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>
+                          {data.basic_info.school.name.length > 25
+                            ? data.basic_info.school.name.substring(0, 25) + '...'
+                            : data.basic_info.school.name}
+                        </span>
+                        <span style={{ fontWeight: 700 }}>{formatCurrency(cost)}</span>
+                      </div>
+                      <div className="progress-bar" style={{ height: '12px' }}>
+                        <div
+                          className="progress-bar-fill"
+                          style={{
+                            width: `${(cost / maxCost) * 100}%`,
+                            background: 'var(--color-warning)',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Completion Rate Comparison */}
+            <div className="card">
+              <div className="card-header">🎓 Completion Rate</div>
+              <div className="card-body">
+                {comparisonData.map((data) => {
+                  const rate = data.basic_info.latest.completion_rate_overall || data.basic_info.latest.completion_rate_4yr || 0;
+                  return (
+                    <div key={data.school_id} style={{ marginBottom: 'var(--space-4)' }}>
+                      <div className="flex justify-between items-center mb-2">
+                        <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>
+                          {data.basic_info.school.name.length > 25
+                            ? data.basic_info.school.name.substring(0, 25) + '...'
+                            : data.basic_info.school.name}
+                        </span>
+                        <span style={{ fontWeight: 700 }}>{formatPercentage(rate)}</span>
+                      </div>
+                      <div className="progress-bar" style={{ height: '12px' }}>
+                        <div
+                          className="progress-bar-fill"
+                          style={{
+                            width: `${rate * 100}%`,
+                            background: 'var(--color-success)',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Earnings Comparison */}
+            <div className="card">
+              <div className="card-header">💵 Median Earnings (10 Years)</div>
+              <div className="card-body">
+                {comparisonData.map((data) => {
+                  const earnings = data.basic_info.latest.median_earnings_10yr || 0;
+                  const maxEarnings = Math.max(
+                    ...comparisonData.map((d) => d.basic_info.latest.median_earnings_10yr || 0)
+                  );
+                  return (
+                    <div key={data.school_id} style={{ marginBottom: 'var(--space-4)' }}>
+                      <div className="flex justify-between items-center mb-2">
+                        <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>
+                          {data.basic_info.school.name.length > 25
+                            ? data.basic_info.school.name.substring(0, 25) + '...'
+                            : data.basic_info.school.name}
+                        </span>
+                        <span style={{ fontWeight: 700 }}>{formatCurrency(earnings)}</span>
+                      </div>
+                      <div className="progress-bar" style={{ height: '12px' }}>
+                        <div
+                          className="progress-bar-fill"
+                          style={{
+                            width: `${maxEarnings > 0 ? (earnings / maxEarnings) * 100 : 0}%`,
+                            background: 'var(--color-info)',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-3 mt-6">
+          <Link to="/" className="btn btn-outline">
+            ← Add More Schools
+          </Link>
+        </div>
       </div>
     </div>
   );
 };
-
-// Helper component for metric rows in card view
-const MetricRow: React.FC<{
-  label: string;
-  value: string;
-  isWinner?: boolean;
-  color: string;
-}> = ({ label, value, isWinner, color }) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-    <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>{label}</span>
-    <span style={{ 
-      fontWeight: '600',
-      color: isWinner ? '#166534' : 'inherit',
-      background: isWinner ? '#dcfce7' : 'transparent',
-      padding: isWinner ? '0.125rem 0.5rem' : '0',
-      borderRadius: '0.25rem',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.25rem'
-    }}>
-      {value}
-      {isWinner && <span></span>}
-    </span>
-  </div>
-);
 
 export default Compare;
