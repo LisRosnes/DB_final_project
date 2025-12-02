@@ -27,10 +27,14 @@ def _merge_costs_into_basic_info(basic_info, costs):
 
     latest = basic_info.get('latest', {}) or {}
 
-    latest['median_earnings_10yr'] = costs.get('earnings', {}).get('10_yrs_after_entry', {}).get('median')
+    # Prefer normalized fields if present
+    latest['median_earnings_10yr'] = costs.get('median_earnings_10yr') or costs.get('earnings', {}).get('10_yrs_after_entry', {}).get('median')
     # Optional fields if present
     latest['median_earnings_6yr'] = costs.get('earnings', {}).get('6_yrs_after_entry', {}).get('median')
-    latest['median_debt'] = costs.get('debt', {}).get('median') if costs.get('debt') else latest.get('median_debt')
+    # median_debt is stored in `aid.median_debt` in the costs_aid_completion collection; prefer normalized field
+    latest['median_debt'] = costs.get('median_debt') or (
+        costs.get('aid', {}).get('median_debt', {}).get('completers', {}).get('overall')
+    ) or latest.get('median_debt')
     latest['completion_rate_4yr'] = costs.get('completion', {}).get('completion_rate_4yr_150nt')
     latest['completion_rate_overall'] = costs.get('completion', {}).get('completion_rate_overall')
     latest['default_rate_3yr'] = costs.get('repayment', {}).get('3_yr_default_rate')
@@ -60,7 +64,7 @@ def filter_schools():
     - major_threshold: Minimum percentage for major filter (default 0.05)
     - page: Page number (default 1)
     - limit: Results per page (default 20, max 100)
-        - sort_by: Field to sort by (default 'school.name')
+        - sort_by: Field to sort by (default 'latest.size')
             Common options: 'school.name', 'latest.avg_net_price', 'latest.size', 'latest.admission_rate'
     - sort_order: 'asc' or 'desc' (default 'asc')
     """
@@ -75,32 +79,32 @@ def filter_schools():
             if request.args.get('state'):
                 filters['state'] = request.args.get('state')
             
-            if request.args.get('cost_min'):
-                filters['cost_min'] = float(request.args.get('cost_min'))
+            # if request.args.get('cost_min'):
+            #     filters['cost_min'] = float(request.args.get('cost_min'))
             
-            if request.args.get('cost_max'):
-                filters['cost_max'] = float(request.args.get('cost_max'))
+            # if request.args.get('cost_max'):
+            #     filters['cost_max'] = float(request.args.get('cost_max'))
             
-            if request.args.get('earnings_min'):
-                filters['earnings_min'] = float(request.args.get('earnings_min'))
+            # if request.args.get('earnings_min'):
+            #     filters['earnings_min'] = float(request.args.get('earnings_min'))
             
-            if request.args.get('admission_rate_max'):
-                filters['admission_rate_max'] = float(request.args.get('admission_rate_max'))
+            # if request.args.get('admission_rate_max'):
+            #     filters['admission_rate_max'] = float(request.args.get('admission_rate_max'))
             
-            if request.args.get('completion_rate_min'):
-                filters['completion_rate_min'] = float(request.args.get('completion_rate_min'))
+            # if request.args.get('completion_rate_min'):
+            #     filters['completion_rate_min'] = float(request.args.get('completion_rate_min'))
             
             if request.args.get('ownership'):
                 filters['ownership'] = int(request.args.get('ownership'))
             
-            if request.args.get('size_min'):
-                filters['size_min'] = int(request.args.get('size_min'))
+            # if request.args.get('size_min'):
+            #     filters['size_min'] = int(request.args.get('size_min'))
             
-            if request.args.get('size_max'):
-                filters['size_max'] = int(request.args.get('size_max'))
+            # if request.args.get('size_max'):
+            #     filters['size_max'] = int(request.args.get('size_max'))
             
-            if request.args.get('degree_level'):
-                filters['degree_level'] = int(request.args.get('degree_level'))
+            # if request.args.get('degree_level'):
+            #     filters['degree_level'] = int(request.args.get('degree_level'))
             
             if request.args.get('sort_by'):
                 filters['sort_by'] = request.args.get('sort_by')

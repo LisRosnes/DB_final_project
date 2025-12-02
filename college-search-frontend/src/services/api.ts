@@ -51,6 +51,16 @@ export const schoolsAPI = {
     return response.data;
   },
 
+  // Get school by ID (basic info)
+  // Note: backend returns a 'basic_info' key inside the full school details response.
+  // We only return the `basic_info` body here so consumers receive a `School` object.
+  getById: async (schoolId: number): Promise<School> => {
+    const response = await api.get(`/schools/${schoolId}`);
+    // If backend sends the wrapper object, return the nested basic_info, otherwise fall back
+    // to the whole response (for backward compat if endpoint changes).
+    return response.data && response.data.basic_info ? response.data.basic_info : response.data;
+  },
+
   // Search schools by name
   search: async (query: string, limit: number = 20): Promise<{ results: School[]; count: number }> => {
     const response = await api.get('/schools/search', {

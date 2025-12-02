@@ -80,7 +80,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
             </select>
           </div>
 
-          {/* Cost Min */}
+          {/* Cost Min
           <div className="form-group">
             <label className="form-label">Min Cost ($)</label>
             <input
@@ -93,7 +93,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
           </div>
 
           {/* Cost Max */}
-          <div className="form-group">
+          {/* <div className="form-group">
             <label className="form-label">Max Cost ($)</label>
             <input
               type="number"
@@ -102,7 +102,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
               value={filters.cost_max || ''}
               onChange={(e) => handleInputChange('cost_max', e.target.value ? parseFloat(e.target.value) : undefined)}
             />
-          </div>
+          </div> */} 
 
           {/* Min Earnings
           <div className="form-group">
@@ -165,7 +165,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
           </div> */}
 
           {/* Major */}
-          {/* <div className="form-group">
+          <div className="form-group">
             <label className="form-label">Major</label>
             <select
               className="form-select"
@@ -180,7 +180,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
                 </option>
               ))}
             </select>
-          </div> */}
+          </div>
 
           {/* Size Min */}
           {/* <div className="form-group">
@@ -211,15 +211,16 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
             <label className="form-label">Sort By</label>
             <select
               className="form-select"
-              value={filters.sort_by || 'school.name'}
+              value={filters.sort_by || 'latest.student.size'}
               onChange={(e) => handleInputChange('sort_by', e.target.value)}
             >
-              <option value="school.name">Name</option>
-              <option value="latest.avg_net_price">Cost</option>
-              <option value="latest.median_earnings_10yr">Earnings</option>
-              <option value="latest.admission_rate">Admission Rate</option>
-              <option value="latest.completion_rate_overall">Completion Rate</option>
-              <option value="latest.size">Size</option>
+              <option value="size">Size</option>
+              <option value="name">Name</option>
+              <option value="cost">Cost</option>
+              <option value="earnings">Earnings</option>
+              <option value="admission_rate">Admission Rate</option>
+              <option value="completion_rate">Completion Rate</option>
+              
             </select>
           </div>
         </div>

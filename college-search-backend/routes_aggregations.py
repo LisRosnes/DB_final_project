@@ -104,29 +104,29 @@ def calculate_roi():
         # Calculate ROI metrics
         pipeline.extend([
             {
-                '$project': {
-                    'school_id': 1,
-                    'school_name': '$school_info.school.name',
-                    'state': '$school_info.school.state',
-                    'cost': '$cost.avg_net_price.overall',
-                    'earnings_6yr': '$earnings.6_yrs_after_entry.median',
-                    'earnings_10yr': '$earnings.10_yrs_after_entry.median',
-                    'completion_rate': '$completion.completion_rate_4yr_150nt',
-                    'median_debt': '$aid.median_debt.completers.overall',
+                    '$project': {
+                        'school_id': 1,
+                        'school_name': '$school_info.school.name',
+                        'state': '$school_info.school.state',
+                        'cost': {'$ifNull': ['$cost.avg_net_price.overall', '$cost.avg_net_price.public']},
+                        'earnings_6yr': '$earnings.6_yrs_after_entry.median',
+                        'earnings_10yr': '$earnings.10_yrs_after_entry.median',
+                        'completion_rate': '$completion.completion_rate_4yr_150nt',
+                        'median_debt': '$aid.median_debt.completers.overall',
                     # Calculate simple ROI: (10yr earnings - cost) / cost
                     'roi_10yr': {
                         '$cond': {
                             'if': {'$and': [
                                 {'$gt': ['$earnings.10_yrs_after_entry.median', 0]},
-                                {'$gt': ['$cost.avg_net_price.overall', 0]}
+                                {'$gt': [{'$ifNull': ['$cost.avg_net_price.overall', '$cost.avg_net_price.public']}, 0]}
                             ]},
                             'then': {
                                 '$divide': [
                                     {'$subtract': [
                                         {'$multiply': ['$earnings.10_yrs_after_entry.median', 10]},
-                                        {'$multiply': ['$cost.avg_net_price.overall', 4]}
+                                            {'$multiply': [{'$ifNull': ['$cost.avg_net_price.overall', '$cost.avg_net_price.public']}, 4]}
                                     ]},
-                                    {'$multiply': ['$cost.avg_net_price.overall', 4]}
+                                    {'$multiply': [{'$ifNull': ['$cost.avg_net_price.overall', '$cost.avg_net_price.public']}, 4]}
                                 ]
                             },
                             'else': None
@@ -135,8 +135,15 @@ def calculate_roi():
                 }
             },
             {'$match': {
-                'cost': {'$ne': None, '$gt': 0},
-                'earnings_10yr': {'$ne': None, '$gt': 0}
+                '$and': [
+                    {
+                        '$or': [
+                            {'cost.avg_net_price.overall': {'$ne': None, '$gt': 0}},
+                            {'cost.avg_net_price.public': {'$ne': None, '$gt': 0}}
+                        ]
+                    },
+                    {'earnings.10_yrs_after_entry.median': {'$ne': None, '$gt': 0}}
+                ]
             }},
             {'$sort': {'roi_10yr': -1}},
             {'$limit': 100}
@@ -292,8 +299,13 @@ def get_cost_vs_earnings():
         pipeline.extend([
             {
                 '$match': {
-                    'cost.avg_net_price.overall': {'$ne': None, '$gt': 0},
-                    'earnings.10_yrs_after_entry.median': {'$ne': None, '$gt': 0}
+                    '$and': [
+                        {'$or': [
+                            {'cost.avg_net_price.overall': {'$ne': None, '$gt': 0}},
+                            {'cost.avg_net_price.public': {'$ne': None, '$gt': 0}}
+                        ]},
+                        {'earnings.10_yrs_after_entry.median': {'$ne': None, '$gt': 0}}
+                    ]
                 }
             },
             {
@@ -302,7 +314,7 @@ def get_cost_vs_earnings():
                     'school_name': '$school_info.school.name',
                     'state': '$school_info.school.state',
                     'ownership': '$school_info.school.ownership',
-                    'cost': '$cost.avg_net_price.overall',
+                    'cost': {'$ifNull': ['$cost.avg_net_price.overall', '$cost.avg_net_price.public']},
                     'earnings': '$earnings.10_yrs_after_entry.median',
                     'completion_rate': '$completion.completion_rate_4yr_150nt',
                     # FIXED: Get size from school_info.latest if available

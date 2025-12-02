@@ -1,9 +1,17 @@
 """
 Data models for college search application
-CORRECTED VERSION - Matches actual MongoDB data structure
 """
 from database import get_collection
 from bson import ObjectId
+
+SORT_FIELD_MAP = {
+    "size": "latest.student.size",
+    "name": "school.name",
+    "cost": "latest.cost.tuition.in_state",  # or avg_net_price if that's what you want
+    "earnings": "latest.earnings.10_yrs_after_entry.median",
+    "admission_rate": "latest.admissions.admission_rate.overall",
+    "completion_rate": "latest.completion.completion_rate_4yr_150nt",
+}
 
 
 class SchoolModel:
@@ -16,7 +24,7 @@ class SchoolModel:
     @staticmethod
     def _normalize_school_doc(doc):
         """Normalizes the school document so frontend can reference common fields like
-        `latest.avg_net_price`, `latest.admission_rate`, and `latest.size`.
+        `latest.avg_net_price`, `latest.admission_rate`, and `latest.student.size`.
         This helps keep the UI consistent regardless of whether data lives in
         `latest.cost.tuition` or `latest.cost.avg_net_price`.
         """
@@ -96,30 +104,30 @@ class SchoolModel:
         
         # Cost range - use tuition.in_state by default, but also create a fallback $or to match
         # either avg_net_price or in/out-state tuition fields.
-        cost_min = filters.get('cost_min')
-        cost_max = filters.get('cost_max')
-        if cost_min is not None:
-            # Using in_state tuition as a proxy for direct cost filters when present
-            query.setdefault('latest.cost.tuition.in_state', {})['$gte'] = cost_min
-        if cost_max is not None:
-            query.setdefault('latest.cost.tuition.in_state', {})['$lte'] = cost_max
+        # cost_min = filters.get('cost_min')
+        # cost_max = filters.get('cost_max')
+        # if cost_min is not None:
+        #     # Using in_state tuition as a proxy for direct cost filters when present
+        #     query.setdefault('latest.cost.tuition.in_state', {})['$gte'] = cost_min
+        # if cost_max is not None:
+        #     query.setdefault('latest.cost.tuition.in_state', {})['$lte'] = cost_max
 
-        if cost_min is not None or cost_max is not None:
-            cost_candidates = ['latest.cost.avg_net_price.overall', 'latest.cost.tuition.in_state', 'latest.cost.tuition.out_of_state']
-            cost_conditions = []
-            for field in cost_candidates:
-                cond = {}
-                if cost_min is not None:
-                    cond['$gte'] = cost_min
-                if cost_max is not None:
-                    cond['$lte'] = cost_max
-                if cond:
-                    cost_conditions.append({field: cond})
-            if cost_conditions:
-                if len(cost_conditions) == 1:
-                    query.update(cost_conditions[0])
-                else:
-                    query['$or'] = cost_conditions
+        # if cost_min is not None or cost_max is not None:
+        #     cost_candidates = ['latest.cost.avg_net_price.overall', 'latest.cost.tuition.in_state', 'latest.cost.tuition.out_of_state']
+        #     cost_conditions = []
+        #     for field in cost_candidates:
+        #         cond = {}
+        #         if cost_min is not None:
+        #             cond['$gte'] = cost_min
+        #         if cost_max is not None:
+        #             cond['$lte'] = cost_max
+        #         if cond:
+        #             cost_conditions.append({field: cond})
+        #     if cost_conditions:
+        #         if len(cost_conditions) == 1:
+        #             query.update(cost_conditions[0])
+        #         else:
+        #             query['$or'] = cost_conditions
         
         # REMOVED: Earnings filter - field doesn't exist in latest
         # You'll need to query costs_aid_completion collection for earnings data
@@ -130,26 +138,26 @@ class SchoolModel:
             # Keeping the check, but note that earnings are often available in `costs_aid_completion` collection
             # or `programs_field_of_study`. This filter will only work if 'latest.earnings.10_yrs_after_entry.median'
             # exists on the document in `schools` collection.
-            if filters.get('earnings_min') is not None:
-                query['latest.earnings.10_yrs_after_entry.median'] = {'$gte': filters['earnings_min']}
+        #     if filters.get('earnings_min') is not None:
+        #         query['latest.earnings.10_yrs_after_entry.median'] = {'$gte': filters['earnings_min']}
         
-        # Admission rate filter - CORRECT
-        if filters.get('admission_rate_max') is not None:
-            query['latest.admissions.admission_rate.overall'] = {'$lte': filters['admission_rate_max']}
+        # # Admission rate filter - CORRECT
+        # if filters.get('admission_rate_max') is not None:
+        #     query['latest.admissions.admission_rate.overall'] = {'$lte': filters['admission_rate_max']}
         
-        # Completion rate filter - CORRECT
-        if filters.get('completion_rate_min') is not None:
-            query['latest.completion.completion_rate_4yr_150nt'] = {'$gte': filters['completion_rate_min']}
+        # # Completion rate filter - CORRECT
+        # if filters.get('completion_rate_min') is not None:
+        #     query['latest.completion.completion_rate_4yr_150nt'] = {'$gte': filters['completion_rate_min']}
         
         # Ownership filter (1=public, 2=private nonprofit, 3=private for-profit)
         if filters.get('ownership'):
             query['school.ownership'] = filters['ownership']
         
-        # Size filter - CORRECT
-        if filters.get('size_min') is not None:
-            query['latest.student.size'] = {'$gte': filters['size_min']}
-        if filters.get('size_max') is not None:
-            query.setdefault('latest.student.size', {})['$lte'] = filters['size_max']
+        # # Size filter - CORRECT
+        # if filters.get('size_min') is not None:
+        #     query['latest.student.size'] = {'$gte': filters['size_min']}
+        # if filters.get('size_max') is not None:
+        #     query.setdefault('latest.student.size', {})['$lte'] = filters['size_max']
         
         # Degree level filter
         if filters.get('degree_level'):
@@ -159,16 +167,22 @@ class SchoolModel:
         if filters.get('school_ids'):
             query['school_id'] = {'$in': filters['school_ids']}
         
-        # Sort options
-        sort_field = filters.get('sort_by', 'school.name')
-        sort_order = -1 if filters.get('sort_order') == 'desc' else 1
-        
+        sort_key = filters.get('sort_by', 'size')
+        sort_field = SORT_FIELD_MAP.get(sort_key, "latest.student.size")
+        sort_order = 1 if filters.get('sort_order') == 'asc' else -1
+
+        print("DEBUG sort_key:", sort_key, "→ sort_field:", sort_field)
+
         total_count = SchoolModel.get_collection().count_documents(query)
-        results = list(SchoolModel.get_collection().find(query)
-                      .sort(sort_field, sort_order)
-                      .skip(skip)
-                      .limit(limit))
-        # Normalize each doc for frontend compatibility
+
+        results = list(
+            SchoolModel.get_collection()
+                .find(query)
+                .sort(sort_field, sort_order)
+                .skip(skip)
+                .limit(limit)
+        )
+
         results = [SchoolModel._normalize_school_doc(r) for r in results]
 
         return {

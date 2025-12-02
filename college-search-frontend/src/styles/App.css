@@ -32,6 +32,14 @@ body {
   line-height: 1.6;
 }
 
+.clickable {
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.clickable:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  transform: translateY(-2px) scale(1.02);
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }

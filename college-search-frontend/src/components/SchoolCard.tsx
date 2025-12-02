@@ -1,6 +1,7 @@
 import React from 'react';
 import { School } from '../types';
 import { formatCurrency, formatPercentage, formatNumber, getOwnershipLabel, getOwnershipColor } from '../utils/helpers';
+import { useNavigate } from 'react-router-dom';
 
 interface SchoolCardProps {
   school: School;
@@ -15,6 +16,7 @@ const SchoolCard: React.FC<SchoolCardProps> = ({
   isSelected = false,
   showCompareButton = true 
 }) => {
+  const navigate = useNavigate();
   // Safety check for required data
   if (!school || !school.school || !school.latest) {
     return null;
@@ -23,7 +25,11 @@ const SchoolCard: React.FC<SchoolCardProps> = ({
   const ownershipColor = getOwnershipColor(school.school.ownership);
 
   return (
-    <div className="card">
+    <div
+      className="card clickable"
+      style={{ cursor: 'pointer' }}
+      onClick={() => navigate(`/school/${school.school_id}`)}
+    >
       <div className="flex justify-between items-center mb-4">
         <div>
           <h3 className="text-xl font-bold">{school.school.name}</h3>
@@ -49,12 +55,12 @@ const SchoolCard: React.FC<SchoolCardProps> = ({
         </div>
 
         {/* Earnings */}
-        <div>
+        {/* <div>
           <p className="text-sm text-gray">Median Earnings (10yr)</p>
           <p className="font-semibold">
             {formatCurrency(school.latest.median_earnings_10yr)}
           </p>
-        </div>
+        </div> */}
 
         {/* Admission Rate */}
         <div>

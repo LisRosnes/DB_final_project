@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Compare from './pages/Compare';
 import Analytics from './pages/Analytics';
 import About from './pages/About';
+import SchoolDetails from './pages/SchoolDetails';
 import './styles/App.css';
 
 const App: React.FC = () => {
@@ -17,6 +18,7 @@ const App: React.FC = () => {
           <Route path="/compare" element={<Compare />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/about" element={<About />} />
+          <Route path="/school/:id" element={<SchoolDetails />} />
         </Routes>
         
         <footer style={{ 
