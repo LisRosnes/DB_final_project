@@ -17,6 +17,16 @@ const StateMapChart: React.FC<StateMapChartProps> = ({
   const chartInstance = useRef<any>(null);
 
   useEffect(() => {
+    // Clean up previous chart instance first
+    if (chartInstance.current) {
+      try {
+        chartInstance.current.destroy();
+      } catch (e) {
+        // Ignore destroy errors - element may already be removed
+      }
+      chartInstance.current = null;
+    }
+
     if (!chartRef.current || data.length === 0) return;
 
     // Sort data by metric value
@@ -128,7 +138,12 @@ const StateMapChart: React.FC<StateMapChartProps> = ({
 
     return () => {
       if (chartInstance.current) {
-        chartInstance.current.destroy();
+        try {
+          chartInstance.current.destroy();
+        } catch (e) {
+          // Ignore destroy errors
+        }
+        chartInstance.current = null;
       }
     };
   }, [data, metric]);

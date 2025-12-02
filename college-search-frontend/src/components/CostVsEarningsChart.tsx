@@ -23,6 +23,16 @@ const CostVsEarningsChart: React.FC<CostVsEarningsChartProps> = ({
   const chartInstance = useRef<any>(null);
 
   useEffect(() => {
+    // Clean up previous chart instance first
+    if (chartInstance.current) {
+      try {
+        chartInstance.current.destroy();
+      } catch (e) {
+        // Ignore destroy errors - element may already be removed
+      }
+      chartInstance.current = null;
+    }
+
     if (!chartRef.current || data.length === 0) return;
 
     // Prepare data for C3.js scatter plot
@@ -101,7 +111,12 @@ const CostVsEarningsChart: React.FC<CostVsEarningsChartProps> = ({
 
     return () => {
       if (chartInstance.current) {
-        chartInstance.current.destroy();
+        try {
+          chartInstance.current.destroy();
+        } catch (e) {
+          // Ignore destroy errors
+        }
+        chartInstance.current = null;
       }
     };
   }, [data]);

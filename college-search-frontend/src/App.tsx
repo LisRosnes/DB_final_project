@@ -5,7 +5,7 @@ import Home from './pages/Home';
 import Compare from './pages/Compare';
 import Analytics from './pages/Analytics';
 import About from './pages/About';
-import SchoolDetails from './pages/SchoolDetails';
+import SchoolDetails from './components/SchoolDetails';
 import './styles/App.css';
 
 const App: React.FC = () => {
@@ -40,7 +40,7 @@ const App: React.FC = () => {
             </a>
           </p>
           <p className="text-sm mt-2">
-            Built by Humphry Amoakone & Elisa Rosnes
+            Built by Humphrey Amoakohene & Elisa Rosnes
           </p>
         </footer>
       </div>

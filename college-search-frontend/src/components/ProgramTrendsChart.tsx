@@ -17,6 +17,16 @@ const ProgramTrendsChart: React.FC<ProgramTrendsChartProps> = ({
   const chartInstance = useRef<any>(null);
 
   useEffect(() => {
+    // Clean up previous chart instance first
+    if (chartInstance.current) {
+      try {
+        chartInstance.current.destroy();
+      } catch (e) {
+        // Ignore destroy errors - element may already be removed
+      }
+      chartInstance.current = null;
+    }
+
     if (!chartRef.current || data.length === 0) return;
 
     // Prepare data for C3.js
@@ -81,7 +91,12 @@ const ProgramTrendsChart: React.FC<ProgramTrendsChartProps> = ({
 
     return () => {
       if (chartInstance.current) {
-        chartInstance.current.destroy();
+        try {
+          chartInstance.current.destroy();
+        } catch (e) {
+          // Ignore destroy errors
+        }
+        chartInstance.current = null;
       }
     };
   }, [data]);

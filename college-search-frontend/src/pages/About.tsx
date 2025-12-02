@@ -76,56 +76,6 @@ const About: React.FC = () => {
         </div>
 
         <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Technology Stack</h2>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <h3 className="font-semibold mb-2">Frontend</h3>
-              <ul className="text-sm text-gray">
-                <li>• React with TypeScript</li>
-                <li>• C3.js for visualizations</li>
-                <li>• React Router</li>
-                <li>• Axios for API calls</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">Backend</h3>
-              <ul className="text-sm text-gray">
-                <li>• Python Flask</li>
-                <li>• MongoDB database</li>
-                <li>• RESTful API</li>
-                <li>• PyMongo driver</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">Database</h3>
-              <ul className="text-sm text-gray">
-                <li>• 5 Collections</li>
-                <li>• ~5.4K Schools</li>
-                <li>• 30 Years of Data</li>
-                <li>• Optimized Indexes</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Project Team</h2>
-          <p className="text-gray mb-2">
-            This project was developed as part of the Advanced Database Systems course by:
-          </p>
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            <div className="card" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-              <h3 className="font-semibold">Humphry Amoakone</h3>
-              <p className="text-sm text-gray">Database Implementation & Backend Development</p>
-            </div>
-            <div className="card" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-              <h3 className="font-semibold">Elisa Rosnes</h3>
-              <p className="text-sm text-gray">Database Architecture & Full Stack</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-6">
           <h2 className="text-xl font-semibold mb-2">Understanding the Data</h2>
           <div className="card" style={{ backgroundColor: '#fef3c7' }}>
             <h3 className="font-semibold mb-2">Important Notes:</h3>
@@ -150,18 +100,8 @@ const About: React.FC = () => {
           </div>
         </div>
 
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Disclaimer</h2>
-          <p className="text-sm text-gray">
-            This platform is provided for educational purposes. While we strive for accuracy, 
-            we recommend verifying all information with the institutions directly. College choice 
-            is a personal decision that should consider many factors beyond those presented here. 
-            This tool is meant to inform, not prescribe, your decision.
-          </p>
-        </div>
-
         <div className="mt-6 flex gap-4">
-          <a href="/" className="btn btn-primary">
+          <a href="/college-search" className="btn btn-primary">
             Start Searching
           </a>
           <a 

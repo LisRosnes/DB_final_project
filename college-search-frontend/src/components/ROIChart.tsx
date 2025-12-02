@@ -12,6 +12,16 @@ const ROIChart: React.FC<ROIChartProps> = ({ data, title = 'ROI Comparison' }) =
   const chartInstance = useRef<any>(null);
 
   useEffect(() => {
+    // Clean up previous chart instance first
+    if (chartInstance.current) {
+      try {
+        chartInstance.current.destroy();
+      } catch (e) {
+        // Ignore destroy errors - element may already be removed
+      }
+      chartInstance.current = null;
+    }
+
     if (!chartRef.current || data.length === 0) return;
 
     // Prepare data for C3.js
@@ -20,13 +30,6 @@ const ROIChart: React.FC<ROIChartProps> = ({ data, title = 'ROI Comparison' }) =
       : d.school_name
     );
     const roiValues = data.map(d => d.roi_10yr);
-    const costValues = data.map(d => d.cost);
-    const earningsValues = data.map(d => d.earnings_10yr);
-
-    // Destroy previous chart if exists
-    if (chartInstance.current) {
-      chartInstance.current.destroy();
-    }
 
     // Create new chart
     chartInstance.current = c3.generate({
@@ -67,9 +70,10 @@ const ROIChart: React.FC<ROIChartProps> = ({ data, title = 'ROI Comparison' }) =
       },
       tooltip: {
         format: {
-          title: (index: number) => data[index].school_name,
+          title: (index: number) => data[index]?.school_name || '',
           value: (value: number, ratio: number, id: string, index: number) => {
             const school = data[index];
+            if (!school) return '';
             return `ROI: ${value.toFixed(1)}%\nCost: $${school.cost.toLocaleString()}\nEarnings: $${school.earnings_10yr.toLocaleString()}`;
           },
         },
@@ -81,7 +85,12 @@ const ROIChart: React.FC<ROIChartProps> = ({ data, title = 'ROI Comparison' }) =
 
     return () => {
       if (chartInstance.current) {
-        chartInstance.current.destroy();
+        try {
+          chartInstance.current.destroy();
+        } catch (e) {
+          // Ignore destroy errors
+        }
+        chartInstance.current = null;
       }
     };
   }, [data]);
