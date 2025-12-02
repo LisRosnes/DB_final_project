@@ -1,6 +1,6 @@
 """
 API routes for aggregations, analytics, and geographic visualizations
-FIXED VERSION - Updated field paths to match actual MongoDB schema
+FIXED VERSION - Updated to match actual MongoDB structure
 """
 from flask import Blueprint, request, jsonify
 from models import CostsAidCompletionModel, SchoolModel
@@ -17,15 +17,9 @@ def parse_json(data):
 
 @aggregations_bp.route('/state', methods=['GET'])
 def get_state_aggregations():
-    """
-    Get state-level statistics for geographic visualization
-    
-    Query parameters:
-    - state: Specific state code (optional, returns all if not specified)
-    """
+    """Get state-level statistics for geographic visualization"""
     try:
         state = request.args.get('state')
-        
         aggregations = CostsAidCompletionModel.get_state_aggregations(state)
         
         return jsonify({
@@ -46,13 +40,13 @@ def calculate_roi():
     - state: Filter by state (optional)
     - ownership: Filter by ownership type (optional)
     - major: Filter by major field (optional)
-    - year: Year for data (default 2024)
+    - year: Year for data (default 2023)
     """
     try:
         state = request.args.get('state')
         ownership = request.args.get('ownership')
         major = request.args.get('major')
-        year = int(request.args.get('year', 2024))
+        year = int(request.args.get('year', 2023))
         
         # Build match conditions
         match_conditions = {'year': year}
@@ -101,43 +95,33 @@ def calculate_roi():
                 }}
             ])
         
-        # Calculate ROI metrics
-        # 1) Project a unified cost and earnings_10yr, and compute ROI from those
+        # Calculate ROI metrics - using flexible cost field access
+        cost_expr = CostsAidCompletionModel.get_cost_field_expr()
+        
         pipeline.extend([
             {
                 '$project': {
                     'school_id': 1,
                     'school_name': '$school_info.school.name',
                     'state': '$school_info.school.state',
-                    # prefer overall, fall back to public
-                    'cost': {
-                        '$ifNull': [
-                            '$cost.avg_net_price.overall',
-                            '$cost.avg_net_price.public'
-                        ]
-                    },
+                    'ownership': '$school_info.school.ownership',
+                    'cost': cost_expr,
                     'earnings_6yr': '$earnings.6_yrs_after_entry.median',
                     'earnings_10yr': '$earnings.10_yrs_after_entry.median',
                     'completion_rate': '$completion.completion_rate_4yr_150nt',
-                    'median_debt': '$aid.median_debt.completers.overall',
-
+                    'median_debt': {
+                        '$ifNull': [
+                            '$aid.median_debt.completers.overall',
+                            '$aid.median_debt'
+                        ]
+                    },
                     # ROI = (10yr earnings * 10 - 4 * cost) / (4 * cost)
                     'roi_10yr': {
                         '$cond': {
                             'if': {
                                 '$and': [
                                     {'$gt': ['$earnings.10_yrs_after_entry.median', 0]},
-                                    {
-                                        '$gt': [
-                                            {
-                                                '$ifNull': [
-                                                    '$cost.avg_net_price.overall',
-                                                    '$cost.avg_net_price.public'
-                                                ]
-                                            },
-                                            0
-                                        ]
-                                    }
+                                    {'$gt': [cost_expr, 0]}
                                 ]
                             },
                             'then': {
@@ -145,30 +129,28 @@ def calculate_roi():
                                     {
                                         '$subtract': [
                                             {'$multiply': ['$earnings.10_yrs_after_entry.median', 10]},
-                                            {
-                                                '$multiply': [
-                                                    {
-                                                        '$ifNull': [
-                                                            '$cost.avg_net_price.overall',
-                                                            '$cost.avg_net_price.public'
-                                                        ]
-                                                    },
-                                                    4
-                                                ]
-                                            }
+                                            {'$multiply': [cost_expr, 4]}
                                         ]
                                     },
-                                    {
-                                        '$multiply': [
-                                            {
-                                                '$ifNull': [
-                                                    '$cost.avg_net_price.overall',
-                                                    '$cost.avg_net_price.public'
-                                                ]
-                                            },
-                                            4
-                                        ]
-                                    }
+                                    {'$multiply': [cost_expr, 4]}
+                                ]
+                            },
+                            'else': None
+                        }
+                    },
+                    # Simple payback period: (4 * cost) / annual_earnings
+                    'payback_years': {
+                        '$cond': {
+                            'if': {
+                                '$and': [
+                                    {'$gt': ['$earnings.10_yrs_after_entry.median', 0]},
+                                    {'$gt': [cost_expr, 0]}
+                                ]
+                            },
+                            'then': {
+                                '$divide': [
+                                    {'$multiply': [cost_expr, 4]},
+                                    '$earnings.10_yrs_after_entry.median'
                                 ]
                             },
                             'else': None
@@ -176,8 +158,7 @@ def calculate_roi():
                     }
                 }
             },
-
-            # 2) Now filter based on the *projected* cost / earnings
+            # Filter out records with missing data
             {
                 '$match': {
                     'cost': {'$ne': None, '$gt': 0},
@@ -185,28 +166,24 @@ def calculate_roi():
                     'roi_10yr': {'$ne': None}
                 }
             },
-
-            # 3) Finally, project the clean response fields
+            # Final projection
             {
                 '$project': {
                     'school_id': 1,
                     'school_name': 1,
                     'state': 1,
-                    'cost': 1,
-                    'earnings_10yr': 1,
-                    'completion_rate': 1,
-                    'median_debt': 1,
-                    'roi_10yr': 1
+                    'ownership': 1,
+                    'cost': {'$round': ['$cost', 0]},
+                    'earnings_10yr': {'$round': ['$earnings_10yr', 0]},
+                    'completion_rate': {'$round': ['$completion_rate', 4]},
+                    'median_debt': {'$round': ['$median_debt', 0]},
+                    'roi_10yr': {'$round': ['$roi_10yr', 2]},
+                    'payback_years': {'$round': ['$payback_years', 1]}
                 }
             },
-            {
-                '$sort': {'roi_10yr': -1}
-            },
-            {
-                '$limit': 100
-            }
+            {'$sort': {'roi_10yr': -1}},
+            {'$limit': 100}
         ])
-
         
         results = list(CostsAidCompletionModel.get_collection().aggregate(pipeline))
         
@@ -222,21 +199,17 @@ def calculate_roi():
         }), 200
         
     except Exception as e:
+        import traceback
+        print(f"Error in ROI calculation: {e}")
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
 @aggregations_bp.route('/earnings-distribution', methods=['GET'])
 def get_earnings_distribution():
-    """
-    Get earnings distribution across schools
-    
-    Query parameters:
-    - year: Year for data (default 2024)
-    - major: Filter by major (optional)
-    - state: Filter by state (optional)
-    """
+    """Get earnings distribution across schools"""
     try:
-        year = int(request.args.get('year', 2024))
+        year = int(request.args.get('year', 2023))
         major = request.args.get('major')
         state = request.args.get('state')
         
@@ -282,12 +255,18 @@ def get_earnings_distribution():
         # Group into earnings buckets
         pipeline.extend([
             {
+                '$match': {
+                    'earnings.10_yrs_after_entry.median': {'$ne': None, '$gt': 0}
+                }
+            },
+            {
                 '$bucket': {
                     'groupBy': '$earnings.10_yrs_after_entry.median',
                     'boundaries': [0, 30000, 40000, 50000, 60000, 70000, 80000, 100000, 150000, 200000, 500000],
                     'default': 'other',
                     'output': {
                         'count': {'$sum': 1},
+                        'avg_earnings': {'$avg': '$earnings.10_yrs_after_entry.median'},
                         'schools': {
                             '$push': {
                                 'school_id': '$school_id',
@@ -317,20 +296,14 @@ def get_earnings_distribution():
 
 @aggregations_bp.route('/cost-vs-earnings', methods=['GET'])
 def get_cost_vs_earnings():
-    """
-    Get cost vs earnings scatter plot data
-    
-    Query parameters:
-    - year: Year for data (default 2024)
-    - state: Filter by state (optional)
-    - ownership: Filter by ownership (optional)
-    - limit: Max results (default 200)
-    """
+    """Get cost vs earnings scatter plot data"""
     try:
-        year = int(request.args.get('year', 2024))
+        year = int(request.args.get('year', 2023))
         state = request.args.get('state')
         ownership = request.args.get('ownership')
         limit = min(int(request.args.get('limit', 200)), 500)
+        
+        cost_expr = CostsAidCompletionModel.get_cost_field_expr()
         
         pipeline = [
             {'$match': {'year': year}},
@@ -357,39 +330,23 @@ def get_cost_vs_earnings():
         
         pipeline.extend([
             {
-                '$match': {
-                    '$and': [
-                        {'$or': [
-                            {'cost.avg_net_price.overall': {'$ne': None, '$gt': 0}},
-                            {'cost.avg_net_price.public': {'$ne': None, '$gt': 0}}
-                        ]},
-                        {'earnings.10_yrs_after_entry.median': {'$ne': None, '$gt': 0}}
-                    ]
-                }
-            },
-            {
                 '$project': {
                     'school_id': 1,
                     'school_name': '$school_info.school.name',
                     'state': '$school_info.school.state',
                     'ownership': '$school_info.school.ownership',
-                    'cost': {
-                        '$ifNull': [
-                            '$cost.avg_net_price.overall',
-                            '$cost.avg_net_price.public'
-                        ]
-                    },
+                    'cost': cost_expr,
                     'earnings': '$earnings.10_yrs_after_entry.median',
                     'completion_rate': '$completion.completion_rate_4yr_150nt',
-                    'size': {
-                        '$ifNull': [
-                            '$school_info.latest.student.size',
-                            '$school_info.latest.size'
-                        ]
-                    }
+                    'size': '$school_info.school.student.size'
                 }
-            }
-            ,
+            },
+            {
+                '$match': {
+                    'cost': {'$ne': None, '$gt': 0},
+                    'earnings': {'$ne': None, '$gt': 0}
+                }
+            },
             {'$limit': limit}
         ])
         
@@ -402,21 +359,18 @@ def get_cost_vs_earnings():
         }), 200
         
     except Exception as e:
+        import traceback
+        print(f"Error in cost-vs-earnings: {e}")
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
 @aggregations_bp.route('/completion-rates', methods=['GET'])
 def get_completion_rates():
-    """
-    Get completion rate statistics
-    
-    Query parameters:
-    - group_by: 'state', 'ownership', or 'degree_level' (default 'state')
-    - year: Year for data (default 2024)
-    """
+    """Get completion rate statistics"""
     try:
         group_by = request.args.get('group_by', 'state')
-        year = int(request.args.get('year', 2024))
+        year = int(request.args.get('year', 2023))
         
         # Map group_by to field path
         group_field_map = {
@@ -440,24 +394,30 @@ def get_completion_rates():
             },
             {'$unwind': '$school_info'},
             {
+                '$match': {
+                    'completion.completion_rate_4yr_150nt': {'$ne': None}
+                }
+            },
+            {
                 '$group': {
                     '_id': group_field_map[group_by],
                     'avg_completion_4yr': {'$avg': '$completion.completion_rate_4yr_150nt'},
-                    'avg_completion_overall': {
-                        '$avg': {
-                            '$ifNull': [
-                                '$completion.completion_rate_overall',
-                                '$completion.completion_rate_4yr_150nt'
-                            ]
+                    'median_completion_4yr': {
+                        '$percentile': {
+                            'input': '$completion.completion_rate_4yr_150nt',
+                            'p': [0.5],
+                            'method': 'approximate'
                         }
                     },
+                    'min_completion': {'$min': '$completion.completion_rate_4yr_150nt'},
+                    'max_completion': {'$max': '$completion.completion_rate_4yr_150nt'},
                     'school_count': {'$sum': 1}
                 }
             },
             {'$sort': {'_id': 1}}
         ]
         
-        results = list(CostsAidCompletionModel.get_collection().aggregate(pipeline))
+        results = list(CostsAidCompletionModel.get_collection().aggregate(pipeline, allowDiskUse=True))
         
         return jsonify({
             'data': parse_json(results),
@@ -466,4 +426,61 @@ def get_completion_rates():
         }), 200
         
     except Exception as e:
+        import traceback
+        print(f"Error in completion-rates: {e}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@aggregations_bp.route('/summary-stats', methods=['GET'])
+def get_summary_stats():
+    """Get summary statistics for the dataset"""
+    try:
+        year = int(request.args.get('year', 2023))
+        
+        cost_expr = CostsAidCompletionModel.get_cost_field_expr()
+        
+        pipeline = [
+            {'$match': {'year': year}},
+            {
+                '$group': {
+                    '_id': None,
+                    'total_schools': {'$sum': 1},
+                    'schools_with_earnings': {
+                        '$sum': {
+                            '$cond': [
+                                {'$gt': ['$earnings.10_yrs_after_entry.median', 0]},
+                                1,
+                                0
+                            ]
+                        }
+                    },
+                    'schools_with_cost': {
+                        '$sum': {
+                            '$cond': [
+                                {'$gt': [cost_expr, 0]},
+                                1,
+                                0
+                            ]
+                        }
+                    },
+                    'avg_cost': {'$avg': cost_expr},
+                    'avg_earnings': {'$avg': '$earnings.10_yrs_after_entry.median'},
+                    'avg_completion': {'$avg': '$completion.completion_rate_4yr_150nt'},
+                    'avg_debt': {'$avg': '$aid.median_debt.completers.overall'}
+                }
+            }
+        ]
+        
+        results = list(CostsAidCompletionModel.get_collection().aggregate(pipeline))
+        
+        return jsonify({
+            'summary': parse_json(results[0] if results else {}),
+            'year': year
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        print(f"Error in summary-stats: {e}")
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500

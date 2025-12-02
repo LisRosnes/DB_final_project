@@ -78,14 +78,14 @@ const Compare: React.FC = () => {
     return `https://${url}`;
   };
 
-  // Helper to get nested latest values safely
-  const getLatestValue = (data: ComparisonData, path: string) => {
-    const parts = path.split('.');
-    let value: any = data.basic_info?.latest;
-    for (const part of parts) {
-      value = value?.[part];
-    }
-    return value;
+  // Helper to get latest values safely - using normalized fields
+  // Simpler version with type assertion
+  const getLatestValue = (data: ComparisonData, field: string) => {
+    const latest = data.basic_info?.latest;
+    if (!latest) return undefined;
+    
+    // Type assertion - we know these fields exist from the backend normalization
+    return (latest as any)[field];
   };
 
   const renderChart = () => {
@@ -111,25 +111,25 @@ const Compare: React.FC = () => {
 
     switch (chartMetric) {
       case 'cost':
-        values = comparisonData.map(d => getLatestValue(d, 'cost.avg_net_price.overall') || 0);
+        values = comparisonData.map(d => getLatestValue(d, 'avg_net_price') || 0);
         label = 'Average Net Price ($)';
         color = '#f59e0b';
         formatter = (v) => `$${(v / 1000).toFixed(0)}K`;
         break;
       case 'earnings':
-        values = comparisonData.map(d => getLatestValue(d, 'earnings.10_yrs_after_entry.median') || 0);
+        values = comparisonData.map(d => getLatestValue(d, 'median_earnings_10yr') || 0);
         label = 'Median Earnings 10yr ($)';
         color = '#10b981';
         formatter = (v) => `$${(v / 1000).toFixed(0)}K`;
         break;
       case 'completion':
-        values = comparisonData.map(d => (getLatestValue(d, 'completion.completion_rate_4yr_150nt') || 0) * 100);
+        values = comparisonData.map(d => (getLatestValue(d, 'completion_rate_4yr') || 0) * 100);
         label = 'Graduation Rate (%)';
         color = '#8b5cf6';
         formatter = (v) => `${v.toFixed(0)}%`;
         break;
       case 'size':
-        values = comparisonData.map(d => getLatestValue(d, 'student.size') || 0);
+        values = comparisonData.map(d => getLatestValue(d, 'size') || 0);
         label = 'Student Population';
         color = '#3b82f6';
         formatter = (v) => v.toLocaleString();
@@ -165,14 +165,14 @@ const Compare: React.FC = () => {
     });
   };
 
-  const getWinner = (metric: string, higherIsBetter: boolean = true): number | null => {
+  const getWinner = (field: string, higherIsBetter: boolean = true): number | null => {
     if (comparisonData.length < 2) return null;
     
     let bestValue = higherIsBetter ? -Infinity : Infinity;
     let winnerId = null;
     
     comparisonData.forEach(data => {
-      const value = getLatestValue(data, metric);
+      const value = getLatestValue(data, field);
       if (value !== null && value !== undefined) {
         if ((higherIsBetter && value > bestValue) || (!higherIsBetter && value < bestValue)) {
           bestValue = value;
@@ -199,7 +199,7 @@ const Compare: React.FC = () => {
     return (
       <div className="container" style={{ paddingTop: '2rem' }}>
         <div className="card text-center" style={{ padding: '3rem' }}>
-          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📊</div>
+          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}></div>
           <h2 className="text-xl font-bold mb-4">No Schools Selected</h2>
           <p className="text-gray mb-4">
             You haven't selected any schools to compare yet.<br/>
@@ -254,7 +254,7 @@ const Compare: React.FC = () => {
                 textTransform: 'capitalize'
               }}
             >
-              {mode === 'cards' ? '🃏 Cards' : mode === 'table' ? '📋 Table' : '📊 Charts'}
+              {mode === 'cards' ? ' Cards' : mode === 'table' ? ' Table' : ' Charts'}
             </button>
           ))}
         </div>
@@ -308,37 +308,37 @@ const Compare: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <MetricRow
                     label="Net Price"
-                    value={formatCurrency(getLatestValue(data, 'cost.avg_net_price.overall'))}
-                    isWinner={getWinner('cost.avg_net_price.overall', false) === data.school_id}
+                    value={formatCurrency(getLatestValue(data, 'avg_net_price'))}
+                    isWinner={getWinner('avg_net_price', false) === data.school_id}
                     color="#f59e0b"
                   />
                   <MetricRow
                     label="Earnings (10yr)"
-                    value={formatCurrency(getLatestValue(data, 'earnings.10_yrs_after_entry.median'))}
-                    isWinner={getWinner('earnings.10_yrs_after_entry.median', true) === data.school_id}
+                    value={formatCurrency(getLatestValue(data, 'median_earnings_10yr'))}
+                    isWinner={getWinner('median_earnings_10yr', true) === data.school_id}
                     color="#10b981"
                   />
                   <MetricRow
                     label="Graduation Rate"
-                    value={formatPercentage(getLatestValue(data, 'completion.completion_rate_4yr_150nt'))}
-                    isWinner={getWinner('completion.completion_rate_4yr_150nt', true) === data.school_id}
+                    value={formatPercentage(getLatestValue(data, 'completion_rate_4yr'))}
+                    isWinner={getWinner('completion_rate_4yr', true) === data.school_id}
                     color="#8b5cf6"
                   />
                   <MetricRow
                     label="Acceptance Rate"
-                    value={formatPercentage(getLatestValue(data, 'admissions.admission_rate.overall'))}
-                    isWinner={getWinner('admissions.admission_rate.overall', false) === data.school_id}
+                    value={formatPercentage(getLatestValue(data, 'admission_rate'))}
+                    isWinner={getWinner('admission_rate', false) === data.school_id}
                     color="#3b82f6"
                   />
                   <MetricRow
                     label="Student Size"
-                    value={formatNumber(getLatestValue(data, 'student.size'))}
+                    value={formatNumber(getLatestValue(data, 'size'))}
                     color="#6b7280"
                   />
                   <MetricRow
                     label="SAT Average"
-                    value={getLatestValue(data, 'admissions.sat_scores.average.overall')?.toString() || 'N/A'}
-                    isWinner={getWinner('admissions.sat_scores.average.overall', true) === data.school_id}
+                    value={getLatestValue(data, 'sat_avg')?.toString() || 'N/A'}
+                    isWinner={getWinner('sat_avg', true) === data.school_id}
                     color="#ec4899"
                   />
                 </div>
@@ -346,7 +346,7 @@ const Compare: React.FC = () => {
                 {/* Actions */}
                 <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
                   <a
-                    href={`/school/${data.school_id}`}
+                    href={`school/${data.school_id}`}
                     className="btn btn-outline"
                     style={{ flex: 1, textAlign: 'center' }}
                   >
@@ -394,30 +394,30 @@ const Compare: React.FC = () => {
             </thead>
             <tbody>
               {[
-                { label: 'Type', path: null, getValue: (d: ComparisonData) => getOwnershipLabel(d.basic_info.school.ownership) },
-                { label: 'Student Size', path: 'student.size', format: formatNumber },
-                { label: 'Acceptance Rate', path: 'admissions.admission_rate.overall', format: formatPercentage, lowerBetter: true },
-                { label: 'SAT Average', path: 'admissions.sat_scores.average.overall' },
-                { label: 'ACT Midpoint', path: 'admissions.act_scores.midpoint.cumulative' },
-                { label: 'Net Price', path: 'cost.avg_net_price.overall', format: formatCurrency, lowerBetter: true },
-                { label: 'In-State Tuition', path: 'cost.tuition.in_state', format: formatCurrency },
-                { label: 'Out-of-State Tuition', path: 'cost.tuition.out_of_state', format: formatCurrency },
-                { label: 'Graduation Rate', path: 'completion.completion_rate_4yr_150nt', format: formatPercentage },
-                { label: 'Earnings (6yr)', path: 'earnings.6_yrs_after_entry.median', format: formatCurrency },
-                { label: 'Earnings (10yr)', path: 'earnings.10_yrs_after_entry.median', format: formatCurrency },
-                { label: 'Median Debt', path: 'aid.median_debt.completers.overall', format: formatCurrency, lowerBetter: true },
-                { label: 'Pell Grant Rate', path: 'aid.pell_grant_rate', format: formatPercentage },
-                { label: 'Default Rate (3yr)', path: 'repayment.3_yr_default_rate', format: formatPercentage, lowerBetter: true },
+                { label: 'Type', getValue: (d: ComparisonData) => getOwnershipLabel(d.basic_info.school.ownership) },
+                { label: 'Student Size', field: 'size', format: formatNumber },
+                { label: 'Acceptance Rate', field: 'admission_rate', format: formatPercentage, lowerBetter: true },
+                { label: 'SAT Average', field: 'sat_avg' },
+                { label: 'ACT Midpoint', field: 'act_avg' },
+                { label: 'Net Price', field: 'avg_net_price', format: formatCurrency, lowerBetter: true },
+                { label: 'In-State Tuition', field: 'tuition_in_state', format: formatCurrency },
+                { label: 'Out-of-State Tuition', field: 'tuition_out_of_state', format: formatCurrency },
+                { label: 'Graduation Rate', field: 'completion_rate_4yr', format: formatPercentage },
+                { label: 'Earnings (6yr)', field: 'median_earnings_6yr', format: formatCurrency },
+                { label: 'Earnings (10yr)', field: 'median_earnings_10yr', format: formatCurrency },
+                { label: 'Median Debt', field: 'median_debt', format: formatCurrency, lowerBetter: true },
+                { label: 'Pell Grant Rate', field: 'pell_grant_rate', format: formatPercentage },
+                { label: 'Default Rate (3yr)', field: 'default_rate_3yr', format: formatPercentage, lowerBetter: true },
               ].map((row) => {
-                const winner = row.path ? getWinner(row.path, !row.lowerBetter) : null;
+                const winner = row.field ? getWinner(row.field, !row.lowerBetter) : null;
                 return (
                   <tr key={row.label} style={{ borderBottom: '1px solid #e5e7eb' }}>
                     <td style={{ padding: '0.75rem 1rem', fontWeight: '500' }}>{row.label}</td>
                     {comparisonData.map((data) => {
                       const value = row.getValue 
                         ? row.getValue(data) 
-                        : row.path 
-                          ? getLatestValue(data, row.path) 
+                        : row.field 
+                          ? getLatestValue(data, row.field) 
                           : null;
                       const formatted = row.format && value !== null && value !== undefined
                         ? row.format(value)
@@ -454,10 +454,10 @@ const Compare: React.FC = () => {
           {/* Metric Selector */}
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
             {([
-              { key: 'cost', label: '💰 Cost', color: '#f59e0b' },
-              { key: 'earnings', label: '💵 Earnings', color: '#10b981' },
-              { key: 'completion', label: '🎓 Graduation', color: '#8b5cf6' },
-              { key: 'size', label: '👥 Size', color: '#3b82f6' },
+              { key: 'cost', label: ' Cost', color: '#f59e0b' },
+              { key: 'earnings', label: ' Earnings', color: '#10b981' },
+              { key: 'completion', label: ' Graduation', color: '#8b5cf6' },
+              { key: 'size', label: ' Size', color: '#3b82f6' },
             ] as const).map((metric) => (
               <button
                 key={metric.key}
@@ -556,7 +556,7 @@ const MetricRow: React.FC<{
       gap: '0.25rem'
     }}>
       {value}
-      {isWinner && <span>🏆</span>}
+      {isWinner && <span></span>}
     </span>
   </div>
 );

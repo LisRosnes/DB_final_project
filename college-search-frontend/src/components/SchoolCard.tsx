@@ -25,7 +25,7 @@ const SchoolCard: React.FC<SchoolCardProps> = ({
 
   const ownershipColor = getOwnershipColor(school.school.ownership);
 
-  // Helper to get nested latest values safely
+  // Helper to get nested values safely
   const getLatestValue = (path: string) => {
     if (!school.latest) return undefined;
     const parts = path.split('.');
@@ -101,7 +101,7 @@ const SchoolCard: React.FC<SchoolCardProps> = ({
         <div>
           <p className="text-sm text-gray">Avg. Net Price</p>
           <p className="font-semibold">
-            {formatCurrency(getLatestValue('cost.avg_net_price.overall'))}
+            {formatCurrency(getLatestValue('avg_net_price') || getLatestValue('cost.avg_net_price.overall'))}
           </p>
         </div>
 
@@ -109,7 +109,7 @@ const SchoolCard: React.FC<SchoolCardProps> = ({
         <div>
           <p className="text-sm text-gray">Admission Rate</p>
           <p className="font-semibold">
-            {formatPercentage(getLatestValue('admissions.admission_rate.overall'))}
+            {formatPercentage(getLatestValue('admission_rate') || getLatestValue('admissions.admission_rate.overall'))}
           </p>
         </div>
 
@@ -117,7 +117,7 @@ const SchoolCard: React.FC<SchoolCardProps> = ({
         <div>
           <p className="text-sm text-gray">Completion Rate</p>
           <p className="font-semibold">
-            {formatPercentage(getLatestValue('completion.completion_rate_4yr_150nt'))}
+            {formatPercentage(getLatestValue('completion_rate_4yr') || getLatestValue('completion.completion_rate_4yr_150nt'))}
           </p>
         </div>
 
@@ -125,24 +125,24 @@ const SchoolCard: React.FC<SchoolCardProps> = ({
         <div>
           <p className="text-sm text-gray">Size</p>
           <p className="font-semibold">
-            {formatNumber(getLatestValue('student.size'))} students
+            {formatNumber(getLatestValue('student.size') || getLatestValue('size') || 0)} students
           </p>
         </div>
 
         {/* SAT Average */}
-        {getLatestValue('admissions.sat_scores.average.overall') && (
+        {getLatestValue('sat_avg') && (
           <div>
             <p className="text-sm text-gray">SAT Avg.</p>
-            <p className="font-semibold">{getLatestValue('admissions.sat_scores.average.overall')}</p>
+            <p className="font-semibold">{getLatestValue('sat_avg')}</p>
           </div>
         )}
 
         {/* Earnings */}
-        {getLatestValue('earnings.10_yrs_after_entry.median') && (
+        {getLatestValue('median_earnings_10yr') && (
           <div>
             <p className="text-sm text-gray">Earnings (10yr)</p>
             <p className="font-semibold" style={{ color: '#10b981' }}>
-              {formatCurrency(getLatestValue('earnings.10_yrs_after_entry.median'))}
+              {formatCurrency(getLatestValue('median_earnings_10yr'))}
             </p>
           </div>
         )}
