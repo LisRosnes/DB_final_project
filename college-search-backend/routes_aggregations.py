@@ -102,31 +102,73 @@ def calculate_roi():
             ])
         
         # Calculate ROI metrics
+        # 1) Project a unified cost and earnings_10yr, and compute ROI from those
         pipeline.extend([
             {
-                    '$project': {
-                        'school_id': 1,
-                        'school_name': '$school_info.school.name',
-                        'state': '$school_info.school.state',
-                        'cost': {'$ifNull': ['$cost.avg_net_price.overall', '$cost.avg_net_price.public']},
-                        'earnings_6yr': '$earnings.6_yrs_after_entry.median',
-                        'earnings_10yr': '$earnings.10_yrs_after_entry.median',
-                        'completion_rate': '$completion.completion_rate_4yr_150nt',
-                        'median_debt': '$aid.median_debt.completers.overall',
-                    # Calculate simple ROI: (10yr earnings - cost) / cost
+                '$project': {
+                    'school_id': 1,
+                    'school_name': '$school_info.school.name',
+                    'state': '$school_info.school.state',
+                    # prefer overall, fall back to public
+                    'cost': {
+                        '$ifNull': [
+                            '$cost.avg_net_price.overall',
+                            '$cost.avg_net_price.public'
+                        ]
+                    },
+                    'earnings_6yr': '$earnings.6_yrs_after_entry.median',
+                    'earnings_10yr': '$earnings.10_yrs_after_entry.median',
+                    'completion_rate': '$completion.completion_rate_4yr_150nt',
+                    'median_debt': '$aid.median_debt.completers.overall',
+
+                    # ROI = (10yr earnings * 10 - 4 * cost) / (4 * cost)
                     'roi_10yr': {
                         '$cond': {
-                            'if': {'$and': [
-                                {'$gt': ['$earnings.10_yrs_after_entry.median', 0]},
-                                {'$gt': [{'$ifNull': ['$cost.avg_net_price.overall', '$cost.avg_net_price.public']}, 0]}
-                            ]},
+                            'if': {
+                                '$and': [
+                                    {'$gt': ['$earnings.10_yrs_after_entry.median', 0]},
+                                    {
+                                        '$gt': [
+                                            {
+                                                '$ifNull': [
+                                                    '$cost.avg_net_price.overall',
+                                                    '$cost.avg_net_price.public'
+                                                ]
+                                            },
+                                            0
+                                        ]
+                                    }
+                                ]
+                            },
                             'then': {
                                 '$divide': [
-                                    {'$subtract': [
-                                        {'$multiply': ['$earnings.10_yrs_after_entry.median', 10]},
-                                            {'$multiply': [{'$ifNull': ['$cost.avg_net_price.overall', '$cost.avg_net_price.public']}, 4]}
-                                    ]},
-                                    {'$multiply': [{'$ifNull': ['$cost.avg_net_price.overall', '$cost.avg_net_price.public']}, 4]}
+                                    {
+                                        '$subtract': [
+                                            {'$multiply': ['$earnings.10_yrs_after_entry.median', 10]},
+                                            {
+                                                '$multiply': [
+                                                    {
+                                                        '$ifNull': [
+                                                            '$cost.avg_net_price.overall',
+                                                            '$cost.avg_net_price.public'
+                                                        ]
+                                                    },
+                                                    4
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        '$multiply': [
+                                            {
+                                                '$ifNull': [
+                                                    '$cost.avg_net_price.overall',
+                                                    '$cost.avg_net_price.public'
+                                                ]
+                                            },
+                                            4
+                                        ]
+                                    }
                                 ]
                             },
                             'else': None
@@ -134,20 +176,37 @@ def calculate_roi():
                     }
                 }
             },
-            {'$match': {
-                '$and': [
-                    {
-                        '$or': [
-                            {'cost.avg_net_price.overall': {'$ne': None, '$gt': 0}},
-                            {'cost.avg_net_price.public': {'$ne': None, '$gt': 0}}
-                        ]
-                    },
-                    {'earnings.10_yrs_after_entry.median': {'$ne': None, '$gt': 0}}
-                ]
-            }},
-            {'$sort': {'roi_10yr': -1}},
-            {'$limit': 100}
+
+            # 2) Now filter based on the *projected* cost / earnings
+            {
+                '$match': {
+                    'cost': {'$ne': None, '$gt': 0},
+                    'earnings_10yr': {'$ne': None, '$gt': 0},
+                    'roi_10yr': {'$ne': None}
+                }
+            },
+
+            # 3) Finally, project the clean response fields
+            {
+                '$project': {
+                    'school_id': 1,
+                    'school_name': 1,
+                    'state': 1,
+                    'cost': 1,
+                    'earnings_10yr': 1,
+                    'completion_rate': 1,
+                    'median_debt': 1,
+                    'roi_10yr': 1
+                }
+            },
+            {
+                '$sort': {'roi_10yr': -1}
+            },
+            {
+                '$limit': 100
+            }
         ])
+
         
         results = list(CostsAidCompletionModel.get_collection().aggregate(pipeline))
         
@@ -314,10 +373,14 @@ def get_cost_vs_earnings():
                     'school_name': '$school_info.school.name',
                     'state': '$school_info.school.state',
                     'ownership': '$school_info.school.ownership',
-                    'cost': {'$ifNull': ['$cost.avg_net_price.overall', '$cost.avg_net_price.public']},
+                    'cost': {
+                        '$ifNull': [
+                            '$cost.avg_net_price.overall',
+                            '$cost.avg_net_price.public'
+                        ]
+                    },
                     'earnings': '$earnings.10_yrs_after_entry.median',
                     'completion_rate': '$completion.completion_rate_4yr_150nt',
-                    # FIXED: Get size from school_info.latest if available
                     'size': {
                         '$ifNull': [
                             '$school_info.latest.student.size',
@@ -325,7 +388,8 @@ def get_cost_vs_earnings():
                         ]
                     }
                 }
-            },
+            }
+            ,
             {'$limit': limit}
         ])
         

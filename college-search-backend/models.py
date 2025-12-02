@@ -38,6 +38,8 @@ class SchoolModel:
         if 'cost' in latest:
             avg_net_price = latest.get('cost', {}).get('avg_net_price', {}).get('overall')
             if avg_net_price is None:
+                avg_net_price = latest.get('cost', {}).get('avg_net_price', {}).get('public')
+            if avg_net_price is None:
                 # Use in_state tuition as a proxy
                 avg_net_price = latest.get('cost', {}).get('tuition', {}).get('in_state')
 
@@ -268,7 +270,12 @@ class CostsAidCompletionModel:
                 {'$match': {'school_info.school.state': state, 'year': 2020}},
                 {'$group': {
                     '_id': '$school_info.school.state',
-                    'avg_cost': {'$avg': '$cost.avg_net_price.overall'},
+                    'avg_cost': {'$avg': {
+                        '$ifNull': [
+                            '$cost.avg_net_price.overall',
+                            '$cost.avg_net_price.public'
+                        ]
+                    }},
                     'avg_earnings_10yr': {'$avg': '$earnings.10_yrs_after_entry.median'},
                     'avg_completion_rate': {'$avg': '$completion.completion_rate_4yr_150nt'},
                     'school_count': {'$sum': 1}
@@ -286,7 +293,12 @@ class CostsAidCompletionModel:
                 {'$unwind': '$school_info'},
                 {'$group': {
                     '_id': '$school_info.school.state',
-                    'avg_cost': {'$avg': '$cost.avg_net_price.overall'},
+                    'avg_cost': {'$avg': {
+                        '$ifNull': [
+                            '$cost.avg_net_price.overall',
+                            '$cost.avg_net_price.public'
+                        ]
+                    }},
                     'avg_earnings_10yr': {'$avg': '$earnings.10_yrs_after_entry.median'},
                     'avg_completion_rate': {'$avg': '$completion.completion_rate_4yr_150nt'},
                     'school_count': {'$sum': 1}

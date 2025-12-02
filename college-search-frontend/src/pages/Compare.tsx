@@ -17,7 +17,7 @@ const Compare: React.FC = () => {
       loadComparisonData(saved);
     }
   }, []);
-
+  /* Load comparison data for selected schools */
   const loadComparisonData = async (schoolIds: number[]) => {
     try {
       setLoading(true);
