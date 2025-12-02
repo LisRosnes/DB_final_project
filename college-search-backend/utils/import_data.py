@@ -22,8 +22,6 @@ def create_indexes():
     print("- Creating schools indexes...")
     db.schools.create_index([('school_id', 1)], unique=True)
     db.schools.create_index([('school.name', 'text'), ('school.alias', 'text')])
-    # Keep only the fields used frequently in filters/searches. The dataset is
-    # small so compound or many single-field indexes are not required.
     db.schools.create_index([('school.state', 1)])
     db.schools.create_index([('latest.cost.tuition.in_state', 1)])
     db.schools.create_index([('latest.admissions.admission_rate.overall', 1)])
@@ -31,17 +29,14 @@ def create_indexes():
     
     # Admissions_student collection indexes
     print("- Creating admissions_student indexes...")
-    # minimal: used to look up admissions for a school & year
     db.admissions_student.create_index([('school_id', 1), ('year', -1)])
     
     # Academics_programs collection indexes
     print("- Creating academics_programs indexes...")
-    # minimal: school+year lookups are used to retrieve program percentages
     db.academics_programs.create_index([('school_id', 1), ('year', -1)])
     
     # Costs_aid_completion collection indexes
     print("- Creating costs_aid_completion indexes...")
-    # minimal: lookups and analytics by year, cost, and earnings
     db.costs_aid_completion.create_index([('school_id', 1), ('year', -1)])
     db.costs_aid_completion.create_index([('year', -1)])
     db.costs_aid_completion.create_index([('cost.avg_net_price.overall', 1)])
@@ -49,7 +44,6 @@ def create_indexes():
     
     # Programs_field_of_study collection indexes
     print("- Creating programs_field_of_study indexes...")
-    # minimal: retrieve programs by school+year, and look up program by cip code
     db.programs_field_of_study.create_index([('school_id', 1), ('year', -1)])
     db.programs_field_of_study.create_index([('programs.cip_code', 1), ('year', -1)])
     
