@@ -172,6 +172,35 @@ export const aggregationsAPI = {
   },
 };
 
+// Analytics API - New comprehensive analytics endpoints
+export const analyticsAPI = {
+  getStateAnalytics: async (stateCode: string, year = 2023): Promise<any> => {
+    const response = await api.get(`/analytics/state/${stateCode}`, { params: { year } });
+    return response.data;
+  },
+
+  getStateComparison: async (year = 2023): Promise<{ year: number; states: any[] }> => {
+    const response = await api.get('/analytics/state-comparison', { params: { year } });
+    return response.data;
+  },
+
+  getSchoolAnalytics: async (
+    schoolId: number,
+    year = 2023,
+    includeHistory = true
+  ): Promise<any> => {
+    const response = await api.get(`/analytics/school/${schoolId}`, {
+      params: { year, include_history: includeHistory },
+    });
+    return response.data;
+  },
+
+  getAvailableYears: async (): Promise<{ years: number[] }> => {
+    const response = await api.get('/analytics/available-years');
+    return response.data;
+  },
+};
+
 // Health check
 export const healthCheck = async (): Promise<any> => {
   const response = await api.get('/health');

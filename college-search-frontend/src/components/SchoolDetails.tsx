@@ -54,7 +54,7 @@ const SchoolDetails: React.FC = () => {
             <p className="text-danger">{error || 'School not found'}</p>
             <div className="mt-4">
               <button onClick={() => navigate('/')} className="btn btn-primary">
-                ← Back to Search
+                Back to Search
               </button>
             </div>
           </div>
@@ -71,6 +71,13 @@ const SchoolDetails: React.FC = () => {
                               school.ownership === 2 ? 'badge-private' : 
                               school.ownership === 3 ? 'badge-forprofit' : 'badge';
 
+  const tabs = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'academics', label: 'Academics' },
+    { id: 'costs', label: 'Costs & Aid' },
+    { id: 'outcomes', label: 'Outcomes' },
+  ] as const;
+
   return (
     <div className="container main-content">
       {/* Back Button */}
@@ -78,7 +85,10 @@ const SchoolDetails: React.FC = () => {
         onClick={() => navigate(-1)}
         className="btn btn-outline mb-6 flex items-center gap-2"
       >
-        ← Back
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        Back
       </button>
 
       {/* Hero Section */}
@@ -111,7 +121,12 @@ const SchoolDetails: React.FC = () => {
                   rel="noopener noreferrer"
                   className="btn btn-primary"
                 >
-                  Visit Website →
+                  Visit Website
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: '4px' }}>
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                  </svg>
                 </a>
               )}
               {school.price_calculator_url && (
@@ -157,15 +172,42 @@ const SchoolDetails: React.FC = () => {
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="tabs mb-6">
-        {(['overview', 'academics', 'costs', 'outcomes'] as const).map((tab) => (
+      {/* Custom Styled Tab Navigation */}
+      <div className="custom-tabs mb-6">
+        {tabs.map((tab) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`tab ${activeTab === tab ? 'active' : ''}`}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`custom-tab ${activeTab === tab.id ? 'active' : ''}`}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab.id === 'overview' && (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+              </svg>
+            )}
+            {tab.id === 'academics' && (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+              </svg>
+            )}
+            {tab.id === 'costs' && (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+            )}
+            {tab.id === 'outcomes' && (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+              </svg>
+            )}
+            <span>{tab.label}</span>
           </button>
         ))}
       </div>
@@ -178,23 +220,19 @@ const SchoolDetails: React.FC = () => {
               <h3 className="text-xl font-semibold mb-4">School Overview</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-semibold mb-3">Basic Information</h4>
+                  <h4 className="font-semibold mb-3">General Information</h4>
                   <div className="space-y-2">
+                    <div className="metric-row">
+                      <span className="metric-label">Address</span>
+                      <span className="metric-value">{school.address || 'N/A'}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">City, State</span>
+                      <span className="metric-value">{school.city}, {school.state} {school.zip}</span>
+                    </div>
                     <div className="metric-row">
                       <span className="metric-label">Institution Type</span>
                       <span className="metric-value">{getOwnershipLabel(school.ownership)}</span>
-                    </div>
-                    <div className="metric-row">
-                      <span className="metric-label">Location</span>
-                      <span className="metric-value">{school.city}, {school.state}</span>
-                    </div>
-                    <div className="metric-row">
-                      <span className="metric-label">Total Students</span>
-                      <span className="metric-value">{formatNumber(latest.student?.size || 0)}</span>
-                    </div>
-                    <div className="metric-row">
-                      <span className="metric-label">Graduate Students</span>
-                      <span className="metric-value">{formatNumber(latest.student?.grad_students || 0)}</span>
                     </div>
                     <div className="metric-row">
                       <span className="metric-label">Accreditor</span>
@@ -207,83 +245,89 @@ const SchoolDetails: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-3">Admissions</h4>
+                  <h4 className="font-semibold mb-3">Student Body</h4>
+                  <div className="space-y-2">
+                    <div className="metric-row">
+                      <span className="metric-label">Undergraduate Enrollment</span>
+                      <span className="metric-value">{formatNumber(latest.student?.size)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Graduate Enrollment</span>
+                      <span className="metric-value">{formatNumber(latest.student?.grad_students)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Full-Time Faculty Rate</span>
+                      <span className="metric-value">{formatPercentage(school.ft_faculty_rate)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">Instructional Expenditure/FTE</span>
+                      <span className="metric-value">{formatCurrency(school.instructional_expenditure_per_fte)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Demographics */}
+              {latest.student?.demographics?.race_ethnicity && (
+                <div className="mt-8">
+                  <h4 className="font-semibold mb-4">Student Demographics</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {Object.entries(latest.student.demographics.race_ethnicity)
+                      .filter(([_, val]: [string, any]) => val && val > 0)
+                      .sort(([, a]: [string, any], [, b]: [string, any]) => b - a)
+                      .map(([race, percentage]: [string, any]) => (
+                        <div key={race} className="text-center p-4 bg-gray-50 rounded-lg">
+                          <div className="text-2xl font-bold">{formatPercentage(percentage)}</div>
+                          <div className="text-sm text-gray-500 capitalize">{race.replace(/_/g, ' ')}</div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'academics' && (
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Academics & Admissions</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-semibold mb-3">Admissions Statistics</h4>
                   <div className="space-y-2">
                     <div className="metric-row">
                       <span className="metric-label">Acceptance Rate</span>
                       <span className="metric-value">{formatPercentage(latest.admission_rate || latest.admissions?.admission_rate?.overall)}</span>
                     </div>
                     <div className="metric-row">
-                      <span className="metric-label">SAT Average</span>
+                      <span className="metric-label">Average SAT Score</span>
                       <span className="metric-value">{latest.sat_avg || latest.admissions?.sat_scores?.average?.overall || 'N/A'}</span>
                     </div>
                     <div className="metric-row">
-                      <span className="metric-label">ACT Midpoint</span>
-                      <span className="metric-value">{latest.act_avg || 'N/A'}</span>
-                    </div>
-                    <div className="metric-row">
-                      <span className="metric-label">Open Admissions</span>
-                      <span className="metric-value">{school.open_admissions_policy === 1 ? 'Yes' : 'No'}</span>
+                      <span className="metric-label">Average ACT Score</span>
+                      <span className="metric-value">{latest.act_avg || latest.admissions?.act_scores?.midpoint?.cumulative || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'academics' && (
-            <div>
-              <h3 className="text-xl font-semibold mb-4">Academics & Programs</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
-                  <h4 className="font-semibold mb-3">Graduation & Retention</h4>
+                  <h4 className="font-semibold mb-3">Completion Rates</h4>
                   <div className="space-y-2">
                     <div className="metric-row">
                       <span className="metric-label">4-Year Graduation Rate</span>
+                      <span className="metric-value">{formatPercentage(costs_outcomes?.completion?.completion_rate_4yr_100nt)}</span>
+                    </div>
+                    <div className="metric-row">
+                      <span className="metric-label">6-Year Graduation Rate (150%)</span>
                       <span className="metric-value">{formatPercentage(costs_outcomes?.completion?.completion_rate_4yr_150nt)}</span>
                     </div>
                     <div className="metric-row">
-                      <span className="metric-label">Overall Completion Rate</span>
-                      <span className="metric-value">{formatPercentage(costs_outcomes?.completion?.rate_suppressed?.four_year)}</span>
-                    </div>
-                    <div className="metric-row">
-                      <span className="metric-label">FT Faculty Rate</span>
-                      <span className="metric-value">{formatPercentage(school.ft_faculty_rate)}</span>
-                    </div>
-                    <div className="metric-row">
-                      <span className="metric-label">Instructional Expenditure per FTE</span>
-                      <span className="metric-value">{formatCurrency(school.instructional_expenditure_per_fte)}</span>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-3">Student Demographics</h4>
-                  <div className="space-y-2">
-                    <div className="metric-row">
-                      <span className="metric-label">White</span>
-                      <span className="metric-value">{formatPercentage(latest.student?.demographics?.race_ethnicity?.white)}</span>
-                    </div>
-                    <div className="metric-row">
-                      <span className="metric-label">Black</span>
-                      <span className="metric-value">{formatPercentage(latest.student?.demographics?.race_ethnicity?.black)}</span>
-                    </div>
-                    <div className="metric-row">
-                      <span className="metric-label">Hispanic</span>
-                      <span className="metric-value">{formatPercentage(latest.student?.demographics?.race_ethnicity?.hispanic)}</span>
-                    </div>
-                    <div className="metric-row">
-                      <span className="metric-label">Asian</span>
-                      <span className="metric-value">{formatPercentage(latest.student?.demographics?.race_ethnicity?.asian)}</span>
-                    </div>
-                    <div className="metric-row">
-                      <span className="metric-label">International</span>
-                      <span className="metric-value">{formatPercentage(costs_outcomes?.completion?.completion_rate_4yr_150_nonresident?.alien)}</span>
+                      <span className="metric-label">8-Year Graduation Rate (200%)</span>
+                      <span className="metric-value">{formatPercentage(costs_outcomes?.completion?.completion_rate_4yr_200nt)}</span>
                     </div>
                   </div>
                 </div>
               </div>
               
-              {/* Programs Offered */}
+              {/* Programs */}
               {programs?.academics?.program_percentage && (
                 <div className="mt-8">
                   <h4 className="font-semibold mb-4">Top Programs Offered</h4>
@@ -451,7 +495,7 @@ const SchoolDetails: React.FC = () => {
       
       {/* Year Info */}
       <div className="text-sm text-gray mt-6 text-center">
-        Data Year: {year} • Last Updated: {new Date(basic_info?.last_updated?.$date || Date.now()).toLocaleDateString()}
+        Data Year: {year} - Last Updated: {new Date(basic_info?.last_updated?.$date || Date.now()).toLocaleDateString()}
       </div>
     </div>
   );

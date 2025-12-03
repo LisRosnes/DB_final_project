@@ -88,7 +88,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
             {/* State Filter */}
             <div className="form-group">
               <label className="form-label">
-                 State
+                State
               </label>
               <select
                 className="form-select"
@@ -107,7 +107,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
             {/* Ownership Filter */}
             <div className="form-group">
               <label className="form-label">
-                 Institution Type
+                Institution Type
               </label>
               <select
                 className="form-select"
@@ -124,7 +124,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
             {/* Major Filter */}
             <div className="form-group">
               <label className="form-label">
-                 Major / Program
+                Major / Program
               </label>
               <select
                 className="form-select"
@@ -144,7 +144,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
             {/* Sort By */}
             <div className="form-group">
               <label className="form-label">
-                 Sort By
+                Sort By
               </label>
               <select
                 className="form-select"
@@ -152,18 +152,48 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
                 onChange={(e) => handleInputChange('sort_by', e.target.value)}
               >
                 <option value="size">Enrollment (Size)</option>
-                <option value="name">Name (A-Z)</option>
-                <option value="cost">Cost (Low to High)</option>
+                <option value="name">Name</option>
+                <option value="cost">Cost</option>
+                <option value="earnings">Earnings (10yr)</option>
                 <option value="admission_rate">Admission Rate</option>
                 <option value="completion_rate">Completion Rate</option>
               </select>
+            </div>
+
+            {/* Sort Order - NEW */}
+            <div className="form-group">
+              <label className="form-label">
+                Sort Order
+              </label>
+              <div className="sort-order-toggle">
+                <button
+                  type="button"
+                  className={`sort-order-btn ${filters.sort_order !== 'asc' ? 'active' : ''}`}
+                  onClick={() => handleInputChange('sort_order', 'desc')}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                  </svg>
+                  Descending
+                </button>
+                <button
+                  type="button"
+                  className={`sort-order-btn ${filters.sort_order === 'asc' ? 'active' : ''}`}
+                  onClick={() => handleInputChange('sort_order', 'asc')}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 19V5M5 12l7-7 7 7"/>
+                  </svg>
+                  Ascending
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Quick Filters */}
           <div style={{ marginTop: 'var(--space-4)' }}>
             <label className="form-label" style={{ marginBottom: 'var(--space-3)' }}>
-               Quick Filters
+              Quick Filters
             </label>
             <div className="flex flex-wrap gap-2">
               {[

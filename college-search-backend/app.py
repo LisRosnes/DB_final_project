@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from routes_schools import schools_bp
 from routes_programs import programs_bp
 from routes_aggregations import aggregations_bp
+from routes_analytics import analytics_bp
 
 # Load environment variables
 load_dotenv()
@@ -35,6 +36,7 @@ app.config['JSON_SORT_KEYS'] = False
 app.register_blueprint(schools_bp)
 app.register_blueprint(programs_bp)
 app.register_blueprint(aggregations_bp)
+app.register_blueprint(analytics_bp)
 
 
 @app.route('/')
@@ -65,7 +67,8 @@ def health():
         'endpoints': {
             'schools': '/api/schools',
             'programs': '/api/programs',
-            'aggregations': '/api/aggregations'
+            'aggregations': '/api/aggregations',
+            'analytics': '/api/analytics'
         }
     })
 
@@ -96,6 +99,12 @@ def api_docs():
                 'GET /api/aggregations/earnings-distribution': 'Get earnings distribution',
                 'GET /api/aggregations/cost-vs-earnings': 'Get cost vs earnings data',
                 'GET /api/aggregations/completion-rates': 'Get completion rate statistics'
+            },
+            'analytics': {
+                'GET /api/analytics/state/<state_code>': 'Get comprehensive state analytics',
+                'GET /api/analytics/state-comparison': 'Get comparison data across all states',
+                'GET /api/analytics/school/<school_id>': 'Get comprehensive school analytics',
+                'GET /api/analytics/available-years': 'Get list of available years'
             }
         },
         'documentation': 'See README.md for detailed usage examples'
@@ -119,11 +128,11 @@ if __name__ == '__main__':
     debug = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
     
     print(f"\n{'='*60}")
-    print(f"🚀 College Search API Starting...")
+    print(f"College Search API Starting...")
     print(f"{'='*60}")
-    print(f"📍 Host: http://localhost:{port}")
-    print(f"🔧 Debug Mode: {debug}")
-    print(f"📚 API Docs: http://localhost:{port}/api/docs")
+    print(f"Host: http://localhost:{port}")
+    print(f"Debug Mode: {debug}")
+    print(f"API Docs: http://localhost:{port}/api/docs")
     print(f"{'='*60}\n")
     
     app.run(host='0.0.0.0', port=port, debug=debug)
