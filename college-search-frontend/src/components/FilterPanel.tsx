@@ -139,6 +139,11 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onFilterChange, initialFilter
                   </option>
                 ))}
               </select>
+              {loadingMajors && (
+                <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  Loading majors...
+                </div>
+              )}
             </div>
 
             {/* Sort By */}

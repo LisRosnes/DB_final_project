@@ -88,83 +88,113 @@ def get_available_majors():
     Get list of available majors/programs
     
     Query parameters:
-    - year: Year to check (default 2024)
+    - year: Year to check (default 2023)
     """
     try:
-        year = int(request.args.get('year', 2024))
+        year = int(request.args.get('year', 2023))
         
-        # Get all unique program fields that have non-zero percentages
-        pipeline = [
-            {'$match': {'year': year}},
-            {'$limit': 1},
-            {'$project': {'program_percentage': 1}}
+        # Get a sample document to extract major fields
+        sample = AcademicsProgramsModel.get_collection().find_one(
+            {'year': year},
+            {'academics.program_percentage': 1}
+        )
+        
+        print(f"DEBUG: Sample document for year {year}:")
+        print(f"  - Document exists: {sample is not None}")
+        if sample:
+            print(f"  - Has 'academics' field: {'academics' in sample}")
+            if 'academics' in sample:
+                print(f"  - Has 'program_percentage': {'program_percentage' in sample['academics']}")
+                if 'program_percentage' in sample['academics']:
+                    print(f"  - Number of majors: {len(sample['academics']['program_percentage'])}")
+        
+        if not sample:
+            return jsonify({
+                'majors': [],
+                'count': 0,
+                'error': f'No data found for year {year}'
+            }), 200
+        
+        if 'academics' not in sample or 'program_percentage' not in sample['academics']:
+            return jsonify({
+                'majors': [],
+                'count': 0,
+                'error': 'Invalid document structure'
+            }), 200
+        
+        # Get all major field codes
+        majors_dict = sample['academics']['program_percentage']
+        
+        # Create friendly names mapping
+        major_mapping = {
+            'agriculture': 'Agriculture',
+            'resources': 'Natural Resources',
+            'architecture': 'Architecture',
+            'ethnic_cultural_gender': 'Ethnic, Cultural & Gender Studies',
+            'communication': 'Communication',
+            'communications_technology': 'Communications Technology',
+            'computer': 'Computer Science',
+            'personal_culinary': 'Personal & Culinary Services',
+            'education': 'Education',
+            'engineering': 'Engineering',
+            'engineering_technology': 'Engineering Technology',
+            'language': 'Foreign Languages',
+            'family_consumer_science': 'Family & Consumer Sciences',
+            'legal': 'Legal Studies',
+            'english': 'English',
+            'humanities': 'Liberal Arts & Humanities',
+            'library': 'Library Science',
+            'biological': 'Biological Sciences',
+            'mathematics': 'Mathematics',
+            'military': 'Military Science',
+            'multidiscipline': 'Multidisciplinary Studies',
+            'parks_recreation_fitness': 'Parks, Recreation & Fitness',
+            'philosophy_religious': 'Philosophy & Religious Studies',
+            'theology_religious_vocation': 'Theology & Religious Vocations',
+            'physical_science': 'Physical Sciences',
+            'science_technology': 'Science Technology',
+            'psychology': 'Psychology',
+            'security_law_enforcement': 'Security & Law Enforcement',
+            'public_administration_social_service': 'Public Administration',
+            'social_science': 'Social Sciences',
+            'construction': 'Construction Trades',
+            'mechanic_repair_technology': 'Mechanic & Repair Technology',
+            'precision_production': 'Precision Production',
+            'transportation': 'Transportation',
+            'visual_performing': 'Visual & Performing Arts',
+            'health': 'Health Professions',
+            'business_marketing': 'Business & Marketing',
+            'history': 'History'
+        }
+        
+        # Create list of majors with friendly names
+        majors_list = [
+            {
+                'field_code': major_code,
+                'field_name': major_mapping.get(major_code, major_code.replace('_', ' ').title())
+            }
+            for major_code in majors_dict.keys()
         ]
         
-        sample = list(AcademicsProgramsModel.get_collection().aggregate(pipeline))
+        # Sort by field name for better UX
+        majors_list.sort(key=lambda x: x['field_name'])
         
-        if sample:
-            majors = list(sample[0].get('program_percentage', {}).keys())
-            
-            # Create friendly names
-            major_mapping = {
-                'agriculture': 'Agriculture',
-                'resources': 'Natural Resources',
-                'architecture': 'Architecture',
-                'ethnic_cultural_gender': 'Ethnic, Cultural & Gender Studies',
-                'communication': 'Communication',
-                'communications_technology': 'Communications Technology',
-                'computer': 'Computer Science',
-                'personal_culinary': 'Personal & Culinary Services',
-                'education': 'Education',
-                'engineering': 'Engineering',
-                'engineering_technology': 'Engineering Technology',
-                'language': 'Foreign Languages',
-                'family_consumer_science': 'Family & Consumer Sciences',
-                'legal': 'Legal Studies',
-                'english': 'English',
-                'humanities': 'Liberal Arts & Humanities',
-                'library': 'Library Science',
-                'biological': 'Biological Sciences',
-                'mathematics': 'Mathematics',
-                'military': 'Military Science',
-                'multidiscipline': 'Multidisciplinary Studies',
-                'parks_recreation_fitness': 'Parks, Recreation & Fitness',
-                'philosophy_religious': 'Philosophy & Religious Studies',
-                'theology_religious_vocation': 'Theology & Religious Vocations',
-                'physical_science': 'Physical Sciences',
-                'science_technology': 'Science Technology',
-                'psychology': 'Psychology',
-                'security_law_enforcement': 'Security & Law Enforcement',
-                'public_administration_social_service': 'Public Administration',
-                'social_science': 'Social Sciences',
-                'construction': 'Construction Trades',
-                'mechanic_repair_technology': 'Mechanic & Repair Technology',
-                'precision_production': 'Precision Production',
-                'transportation': 'Transportation',
-                'visual_performing': 'Visual & Performing Arts',
-                'health': 'Health Professions',
-                'business_marketing': 'Business & Marketing',
-                'history': 'History'
-            }
-            
-            majors_list = [
-                {
-                    'field_code': major,
-                    'field_name': major_mapping.get(major, major.replace('_', ' ').title())
-                }
-                for major in majors
-            ]
-            
-            return jsonify({
-                'majors': majors_list,
-                'count': len(majors_list)
-            }), 200
-        else:
-            return jsonify({'majors': [], 'count': 0}), 200
+        print(f"DEBUG: Returning {len(majors_list)} majors")
+        
+        return jsonify({
+            'majors': majors_list,
+            'count': len(majors_list)
+        }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
+        import traceback
+        print(f"Error in get_available_majors: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'error': str(e),
+            'majors': [],
+            'count': 0
+        }), 500
 
 @programs_bp.route('/cip-codes', methods=['GET'])
 def get_cip_codes():

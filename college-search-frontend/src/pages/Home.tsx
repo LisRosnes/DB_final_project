@@ -5,7 +5,7 @@ import { schoolsAPI } from '../services/api';
 import FilterPanel from '../components/FilterPanel';
 import SchoolCard from '../components/SchoolCard';
 import MapVisualization from '../components/MapVisualization';
-import { loadFromLocalStorage, saveToLocalStorage, debounce } from '../utils/helpers';
+import { loadFromLocalStorage, saveToLocalStorage, debounce, getMajorName } from '../utils/helpers';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -250,6 +250,7 @@ const Home: React.FC = () => {
             <p className="text-gray">
               Showing <strong>{schools.length}</strong> of <strong>{totalResults}</strong> results
               {filters.state && <span> in <strong>{filters.state}</strong></span>}
+              {filters.major && <span> offering <strong>{getMajorName(filters.major)}</strong></span>}
             </p>
           </div>
 
