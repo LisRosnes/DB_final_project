@@ -270,7 +270,7 @@ export interface SchoolDetails {
 
 export interface Major {
   field_code: string;
-  field_name: string;
+  field_name?: string;
 }
 
 export interface ProgramTrend {
