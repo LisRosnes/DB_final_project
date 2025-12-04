@@ -18,7 +18,6 @@ const Home: React.FC = () => {
   const [totalResults, setTotalResults] = useState(0);
   const [compareList, setCompareList] = useState<number[]>([]);
   
-  // Search bar state
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<School[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -27,7 +26,6 @@ const Home: React.FC = () => {
   const limit = 20;
 
   useEffect(() => {
-    // Load compare list from localStorage
     const saved = loadFromLocalStorage<number[]>('compareList', []);
     setCompareList(saved);
   }, []);
@@ -59,7 +57,6 @@ const Home: React.FC = () => {
     }
   };
 
-  // Debounced search function
   const debouncedSearch = useCallback(
     debounce(async (query: string) => {
       if (query.length < 2) {
@@ -93,7 +90,6 @@ const Home: React.FC = () => {
     setSearchQuery('');
     setShowSearchResults(false);
     setSearchResults([]);
-    // Navigate to school details
     navigate(`/school/${school.school_id}`);
   };
 
@@ -118,10 +114,19 @@ const Home: React.FC = () => {
   const handleCompare = (schoolId: number) => {
     const newList = compareList.includes(schoolId)
       ? compareList.filter(id => id !== schoolId)
-      : [...compareList, schoolId].slice(0, 10); // Max 10 schools
+      : [...compareList, schoolId].slice(0, 10);
 
     setCompareList(newList);
     saveToLocalStorage('compareList', newList);
+  };
+
+  const getOwnershipLabel = (ownership: number) => {
+    switch (ownership) {
+      case 1: return 'Public';
+      case 2: return 'Private Nonprofit';
+      case 3: return 'Private For-Profit';
+      default: return 'Unknown';
+    }
   };
 
   return (
@@ -139,7 +144,7 @@ const Home: React.FC = () => {
           <div style={{ position: 'relative' }}>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <svg
-                style={{ width: '20px', height: '20px', color: '#6b7280' }}
+                style={{ width: '20px', height: '20px', color: '#6b7280', flexShrink: 0 }}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -162,48 +167,22 @@ const Home: React.FC = () => {
                 style={{ flex: 1, fontSize: '1rem', padding: '0.75rem 1rem' }}
               />
               {searchLoading && (
-                <div className="spinner" style={{ width: '20px', height: '20px' }}></div>
+                <div className="spinner" style={{ width: '20px', height: '20px', flexShrink: 0 }}></div>
               )}
             </div>
             
-            {/* Search Results Dropdown */}
+            {/* Search Results Dropdown - Fixed overflow */}
             {showSearchResults && searchResults.length > 0 && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '0.5rem',
-                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                  zIndex: 1000,
-                  maxHeight: '400px',
-                  overflowY: 'auto',
-                  marginTop: '0.25rem'
-                }}
-              >
+              <div className="search-dropdown">
                 {searchResults.map((school) => (
                   <div
                     key={school.school_id}
+                    className="search-dropdown-item"
                     onClick={() => handleSearchSelect(school)}
-                    style={{
-                      padding: '0.75rem 1rem',
-                      cursor: 'pointer',
-                      borderBottom: '1px solid #f3f4f6',
-                      transition: 'background-color 0.2s'
-                    }}
-                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'white')}
                   >
-                    <div style={{ fontWeight: '500' }}>{school.school?.name}</div>
-                    <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                      {school.school?.city}, {school.school?.state} • {
-                        school.school?.ownership === 1 ? 'Public' :
-                        school.school?.ownership === 2 ? 'Private Nonprofit' :
-                        'Private For-Profit'
-                      }
+                    <div className="search-dropdown-name">{school.school?.name}</div>
+                    <div className="search-dropdown-meta">
+                      {school.school?.city}, {school.school?.state} - {getOwnershipLabel(school.school?.ownership || 0)}
                     </div>
                   </div>
                 ))}
@@ -248,7 +227,7 @@ const Home: React.FC = () => {
               <strong>{compareList.length}</strong> school{compareList.length !== 1 ? 's' : ''} selected for comparison
             </div>
             <a href="/compare" className="btn btn-primary btn-sm">
-              Compare Schools →
+              Compare Schools
             </a>
           </div>
         </div>
@@ -295,21 +274,49 @@ const Home: React.FC = () => {
               {totalPages > 1 && (
                 <div className="pagination">
                   <button
+                    className="pagination-btn"
+                    onClick={() => handlePageChange(1)}
+                    disabled={currentPage === 1}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="11 17 6 12 11 7"></polyline>
+                      <polyline points="18 17 13 12 18 7"></polyline>
+                    </svg>
+                  </button>
+                  <button
+                    className="pagination-btn"
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
                   >
-                    ← Previous
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                    <span style={{ marginLeft: '4px' }}>Previous</span>
                   </button>
 
-                  <span className="text-gray">
-                    Page {currentPage} of {totalPages}
-                  </span>
+                  <div className="pagination-info">
+                    Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
+                  </div>
 
                   <button
+                    className="pagination-btn"
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
                   >
-                    Next →
+                    <span style={{ marginRight: '4px' }}>Next</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </button>
+                  <button
+                    className="pagination-btn"
+                    onClick={() => handlePageChange(totalPages)}
+                    disabled={currentPage === totalPages}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="13 17 18 12 13 7"></polyline>
+                      <polyline points="6 17 11 12 6 7"></polyline>
+                    </svg>
                   </button>
                 </div>
               )}
