@@ -137,7 +137,7 @@ const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 const Analytics: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'state' | 'school' | 'trends'>('state');
   const [selectedYear, setSelectedYear] = useState<number>(2023);
-  const [availableYears, setAvailableYears] = useState<number[]>([2023, 2022, 2021, 2020, 2019]);
+  const [availableYears, setAvailableYears] = useState<number[]>([2023, 2022, 2021, 2020, 2019, 2018,2017,2016,2015,2014,2013,2012]);
 
   const [selectedState, setSelectedState] = useState<string>('');
   const [stateAnalytics, setStateAnalytics] = useState<StateAnalytics | null>(null);
