@@ -10,7 +10,7 @@ const About: React.FC = () => {
           <h2 className="text-xl font-semibold mb-2">Our Mission</h2>
           <p className="text-gray mb-4">
             The College Search Platform aims to simplify the college selection process by centralizing 
-            key information—such as cost, major, location, and job outcomes—using the U.S. Department 
+            key information—such as major, location, and institution type using the U.S. Department 
             of Education's College Scorecard dataset. We empower students and families to make 
             transparent, data-informed decisions about higher education.
           </p>
@@ -22,7 +22,7 @@ const About: React.FC = () => {
             <div className="card" style={{ backgroundColor: 'var(--bg-secondary)' }}>
               <h3 className="font-semibold mb-2">🔍 Smart Filtering</h3>
               <p className="text-sm text-gray">
-                Filter universities by cost, outcomes, location, major, and more to find schools 
+                Filter universities by location, major, and institution type to find schools 
                 that match your criteria.
               </p>
             </div>
@@ -33,13 +33,14 @@ const About: React.FC = () => {
                 earnings, completion rates, and more.
               </p>
             </div>
+            {/*
             <div className="card" style={{ backgroundColor: 'var(--bg-secondary)' }}>
               <h3 className="font-semibold mb-2">📊 ROI & Salary Trends</h3>
               <p className="text-sm text-gray">
                 Visualize return on investment and salary trends by major to understand 
                 the financial outcomes of different programs.
               </p>
-            </div>
+            </div> */}
             <div className="card" style={{ backgroundColor: 'var(--bg-secondary)' }}>
               <h3 className="font-semibold mb-2">🗺️ Geographic Insights</h3>
               <p className="text-sm text-gray">

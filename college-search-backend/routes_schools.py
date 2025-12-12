@@ -325,7 +325,7 @@ def debug_school(school_id):
     try:
         year = int(request.args.get('year', 2023))
         
-        # Get all data for this school
+        # Get all data for this school (debug endpoint - no projection to see full structure)
         school = SchoolModel.get_collection().find_one({'school_id': school_id})
         costs = CostsAidCompletionModel.get_collection().find_one({
             'school_id': school_id,

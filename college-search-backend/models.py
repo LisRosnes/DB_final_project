@@ -14,6 +14,59 @@ SORT_FIELD_MAP = {
     "completion_rate": "latest.completion.completion_rate_4yr_150nt",
 }
 
+# Projection dictionaries for efficient queries
+SCHOOL_LIST_PROJECTION = {
+    'school_id': 1,
+    'school.name': 1,
+    'school.city': 1,
+    'school.state': 1,
+    'school.ownership': 1,
+    'school.degrees_awarded': 1,
+    'latest.student.size': 1,
+    'latest.cost.tuition': 1,
+    'latest.cost.avg_net_price': 1,
+    'latest.admissions.admission_rate.overall': 1,
+    'latest.admissions.sat_scores.average.overall': 1,
+    'latest.admissions.act_scores.midpoint.cumulative': 1,
+    'latest.completion.completion_rate_4yr_150nt': 1,
+    'latest.completion.rate_suppressed.four_year': 1,
+    'latest.earnings.10_yrs_after_entry.median': 1,
+    'latest.earnings.6_yrs_after_entry.median': 1,
+    'latest.aid.pell_grant_rate': 1,
+    'latest.aid.median_debt': 1,
+    'latest.repayment.3_yr_default_rate': 1,
+}
+
+SCHOOL_DETAIL_PROJECTION = {
+    'school_id': 1,
+    'school': 1,
+    'location': 1,
+    'latest': 1,
+}
+
+COSTS_AID_PROJECTION = {
+    'school_id': 1,
+    'year': 1,
+    'cost': 1,
+    'aid': 1,
+    'completion': 1,
+    'earnings': 1,
+    'repayment': 1,
+}
+
+PROGRAMS_PROJECTION = {
+    'school_id': 1,
+    'year': 1,
+    'academics.program_percentage': 1,
+}
+
+ADMISSIONS_PROJECTION = {
+    'school_id': 1,
+    'year': 1,
+    'admissions': 1,
+    'student': 1,
+}
+
 
 class SchoolModel:
     """Model for schools collection"""
@@ -100,15 +153,19 @@ class SchoolModel:
     @staticmethod
     def find_by_id(school_id):
         """Find school by school_id"""
-        doc = SchoolModel.get_collection().find_one({'school_id': school_id})
+        doc = SchoolModel.get_collection().find_one(
+            {'school_id': school_id},
+            SCHOOL_DETAIL_PROJECTION
+        )
         return SchoolModel._normalize_school_doc(doc)
     
     @staticmethod
     def search_by_name(query, limit=20):
         """Search schools by name using text search"""
+        projection = {**SCHOOL_LIST_PROJECTION, 'score': {'$meta': 'textScore'}}
         docs = list(SchoolModel.get_collection().find(
             {'$text': {'$search': query}},
-            {'score': {'$meta': 'textScore'}}
+            projection
         ).sort([('score', {'$meta': 'textScore'})]).limit(limit))
         return [SchoolModel._normalize_school_doc(d) for d in docs]
 
@@ -141,7 +198,7 @@ class SchoolModel:
 
         results = list(
             SchoolModel.get_collection()
-                .find(query)
+                .find(query, SCHOOL_LIST_PROJECTION)
                 .sort(sort_field, sort_order)
                 .skip(skip)
                 .limit(limit)
@@ -159,7 +216,10 @@ class SchoolModel:
     @staticmethod
     def get_multiple_by_ids(school_ids):
         """Get multiple schools by their IDs"""
-        docs = list(SchoolModel.get_collection().find({'school_id': {'$in': school_ids}}))
+        docs = list(SchoolModel.get_collection().find(
+            {'school_id': {'$in': school_ids}},
+            SCHOOL_LIST_PROJECTION
+        ))
         return [SchoolModel._normalize_school_doc(d) for d in docs]
 
 
@@ -173,17 +233,18 @@ class CostsAidCompletionModel:
     @staticmethod
     def find_by_school_and_year(school_id, year=2023):
         """Get cost, aid, and completion data for a specific school and year"""
-        return CostsAidCompletionModel.get_collection().find_one({
-            'school_id': school_id,
-            'year': year
-        })
+        return CostsAidCompletionModel.get_collection().find_one(
+            {'school_id': school_id, 'year': year},
+            COSTS_AID_PROJECTION
+        )
     
     @staticmethod
     def get_historical_data(school_id, years=5):
         """Get historical data for trends"""
-        return list(CostsAidCompletionModel.get_collection().find({
-            'school_id': school_id
-        }).sort('year', -1).limit(years))
+        return list(CostsAidCompletionModel.get_collection().find(
+            {'school_id': school_id},
+            COSTS_AID_PROJECTION
+        ).sort('year', -1).limit(years))
     
     @staticmethod
     def get_cost_field_expr():
@@ -262,10 +323,10 @@ class AcademicsProgramsModel:
     @staticmethod
     def find_by_school_and_year(school_id, year=2023):
         """Get programs for a specific school and year"""
-        return AcademicsProgramsModel.get_collection().find_one({
-            'school_id': school_id,
-            'year': year
-        })
+        return AcademicsProgramsModel.get_collection().find_one(
+            {'school_id': school_id, 'year': year},
+            PROGRAMS_PROJECTION
+        )
     
     @staticmethod
     def find_schools_with_major(major_field, threshold=0.05, year=2023):
@@ -312,10 +373,10 @@ class ProgramsFieldOfStudyModel:
     @staticmethod
     def get_programs_by_school(school_id, year=2023):
         """Get all programs offered by a school"""
-        return ProgramsFieldOfStudyModel.get_collection().find_one({
-            'school_id': school_id,
-            'year': year
-        })
+        return ProgramsFieldOfStudyModel.get_collection().find_one(
+            {'school_id': school_id, 'year': year},
+            {'school_id': 1, 'year': 1, 'programs': 1}
+        )
     
     @staticmethod
     def compare_programs_across_schools(cip_code, school_ids, year=2023):
@@ -347,7 +408,7 @@ class AdmissionsStudentModel:
     @staticmethod
     def find_by_school_and_year(school_id, year=2023):
         """Get admissions and student data for a specific school and year"""
-        return AdmissionsStudentModel.get_collection().find_one({
-            'school_id': school_id,
-            'year': year
-        })
+        return AdmissionsStudentModel.get_collection().find_one(
+            {'school_id': school_id, 'year': year},
+            ADMISSIONS_PROJECTION
+        )
