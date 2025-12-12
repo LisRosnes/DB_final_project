@@ -1,0 +1,27 @@
+runtime: python311
+
+# Basic scaling configuration (can be adjusted based on needs)
+instance_class: F2
+
+# Automatic scaling configuration
+automatic_scaling:
+  target_cpu_utilization: 0.65
+  min_instances: 1
+  max_instances: 10
+
+# Environment variables (add your actual values in GCP Console or .env.yaml)
+env_variables:
+  FLASK_DEBUG: "False"
+  CORS_ORIGINS: "https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME,http://localhost:3000"
+  # Add your MongoDB connection string here or use GCP Secret Manager
+  MONGODB_URI: "mongodb+srv://username:password@cluster.mongodb.net/database_name"
+  SECRET_KEY: "your-secret-key-here"
+
+# Entry point - tells GAE how to start your app
+entrypoint: gunicorn -b :$PORT -w 4 --chdir college-search-backend app:app
+
+# Handlers for static files (if needed in the future)
+handlers:
+- url: /.*
+  script: auto
+  secure: always

@@ -1,4 +1,11 @@
 college-search-backend/.env
+college-search-frontend/.env
 college-search-frontend/node_modules/
 college-search-backend/__pycache__
 .DS_Store
+
+# GCP deployment with secrets
+app.yaml
+
+# Build outputs
+college-search-frontend/build/

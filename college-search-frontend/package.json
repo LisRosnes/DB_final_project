@@ -2,7 +2,7 @@
   "name": "college-search-frontend",
   "version": "1.0.0",
   "description": "College Search Platform - Interactive data-driven college selection tool",
-  "homepage": "https://yourusername.github.io/college-search",
+  "homepage": "https://LisRosnes.github.io/DB_final_project",
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^5.17.0",
